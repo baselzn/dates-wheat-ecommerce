@@ -10,7 +10,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { sendFirebaseOtp, verifyFirebaseOtp, clearRecaptcha } from "@/lib/firebase";
 import type { ConfirmationResult } from "firebase/auth";
 import { Phone, Shield, ArrowLeft, Smartphone } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -26,7 +26,6 @@ export default function Auth() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
   // Admin login state
   const [adminEmail, setAdminEmail] = useState("");
@@ -67,7 +66,7 @@ export default function Auth() {
     setOtpLoading(true);
     try {
       const formattedPhone = formatPhone(phone);
-      const result = await sendFirebaseOtp(formattedPhone, "recaptcha-container");
+      const result = await sendFirebaseOtp(formattedPhone);
       setConfirmationResult(result);
       setOtpSent(true);
       setCountdown(60);
@@ -124,10 +123,12 @@ export default function Auth() {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setOtpSent(false);
     setOtp("");
     setConfirmationResult(null);
+    // Pass isResend=true so the reCAPTCHA container is fully reset before next send
+    // The actual re-send happens when the user submits the phone form again
     clearRecaptcha();
   };
 
@@ -149,8 +150,7 @@ export default function Auth() {
 
   return (
     <Layout>
-      {/* Invisible reCAPTCHA container — must be in DOM */}
-      <div id="recaptcha-container" ref={recaptchaContainerRef} />
+      {/* reCAPTCHA container is appended to <body> by firebase.ts — no in-page div needed */}
 
       <div className="min-h-[70vh] flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">

@@ -88,3 +88,4 @@
 - [x] Update user upsert to handle Firebase UID as openId (firebase_{uid})
 - [x] 25 vitest tests passing (4 new Firebase tests)
 - [x] Zero TypeScript errors
+- [x] Fix reCAPTCHA "already rendered" error in Auth.tsx — singleton verifier with body-appended container, proper reset on resend
