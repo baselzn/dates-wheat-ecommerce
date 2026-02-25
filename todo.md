@@ -55,3 +55,7 @@
 - [x] Zero TypeScript errors
 - [x] App.tsx with all routes wired (customer + admin)
 - [x] Database fully seeded
+
+## Bug Fixes
+- [x] Fix /auth error: users table missing columns phone, passwordHash, isActive
+- [x] Create admin user baselbzn@gmail.com with bcrypt-hashed password and admin role
