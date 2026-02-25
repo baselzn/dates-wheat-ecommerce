@@ -167,8 +167,9 @@ export async function upsertCategory(data: {
     await db.update(categories).set(data).where(eq(categories.id, data.id));
     return data.id;
   }
-  const result = await db.insert(categories).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(categories).values(data);
+  const [[{ lid: catId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(catId);
 }
 
 export async function deleteCategory(id: number) {
@@ -302,8 +303,9 @@ export async function upsertProduct(data: {
     await db.update(products).set(rest).where(eq(products.id, id));
     return id;
   }
-  const result = await db.insert(products).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(products).values(data);
+  const [[{ lid: prodId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(prodId);
 }
 
 export async function deleteProduct(id: number) {
@@ -331,8 +333,9 @@ export async function upsertProductVariant(data: {
     await db.update(productVariants).set(rest).where(eq(productVariants.id, id));
     return id;
   }
-  const result = await db.insert(productVariants).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(productVariants).values(data);
+  const [[{ lid: varId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(varId);
 }
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
@@ -386,8 +389,9 @@ export async function upsertCoupon(data: {
     await db.update(coupons).set(rest).where(eq(coupons.id, id));
     return id;
   }
-  const result = await db.insert(coupons).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(coupons).values(data);
+  const [[{ lid: couponId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(couponId);
 }
 
 export async function deleteCoupon(id: number) {
@@ -446,8 +450,9 @@ export async function createOrder(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
-  const result = await db.insert(orders).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(orders).values(data);
+  const [[{ lid: orderId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(orderId);
 }
 
 export async function createOrderItems(items: {
@@ -607,8 +612,9 @@ export async function upsertAddress(data: {
     await db.update(addresses).set(rest).where(eq(addresses.id, id));
     return id;
   }
-  const result = await db.insert(addresses).values(data);
-  return Number((result as unknown as { insertId: number }).insertId);
+  await db.insert(addresses).values(data);
+  const [[{ lid: addrId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(addrId);
 }
 
 export async function deleteAddress(id: number, userId: number) {

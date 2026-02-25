@@ -61,3 +61,4 @@
 - [x] Create admin user baselbzn@gmail.com with bcrypt-hashed password and admin role
 - [x] Create /about (Our Story) page
 - [x] Create /contact page
+- [x] Fix order placement: orderId is NaN when inserting order_items (fixed all 6 insertId usages to use LAST_INSERT_ID())
