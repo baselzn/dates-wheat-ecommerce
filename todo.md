@@ -89,3 +89,4 @@
 - [x] 25 vitest tests passing (4 new Firebase tests)
 - [x] Zero TypeScript errors
 - [x] Fix reCAPTCHA "already rendered" error in Auth.tsx — singleton verifier with body-appended container, proper reset on resend
+- [x] Fix auth/captcha-check-failed: improved error message shows exact domain to add in Firebase Console

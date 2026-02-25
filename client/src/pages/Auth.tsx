@@ -81,7 +81,15 @@ export default function Auth() {
       } else if (msg.includes("too-many-requests")) {
         toast.error("Too many attempts. Please wait a few minutes and try again.");
       } else if (msg.includes("billing-not-enabled")) {
-        toast.error("SMS service not enabled. Please contact support.");
+        toast.error("Firebase SMS not enabled", {
+          description: "Upgrade your Firebase project to the Blaze plan at console.firebase.google.com to enable phone authentication.",
+          duration: 8000,
+        });
+      } else if (msg.includes("captcha-check-failed") || msg.includes("Hostname match not found")) {
+        toast.error("Domain not authorized", {
+          description: `Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized Domains, then try again.`,
+          duration: 10000,
+        });
       } else {
         toast.error(msg);
       }
