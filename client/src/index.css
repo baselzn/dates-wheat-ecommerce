@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,74 +44,85 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
+  /* Brand Colors - Dates & Wheat */
+  --gold: #C9A84C;
+  --gold-light: #E8D5A3;
+  --gold-dark: #9A7A2E;
+  --brown: #3E1F00;
+  --brown-light: #6B3A0F;
+  --cream: #FFF8F0;
+  --beige: #F5ECD7;
+  --beige-dark: #E8D5A3;
+
+  /* Semantic tokens */
+  --primary: oklch(0.72 0.12 75);
+  --primary-foreground: oklch(0.22 0.06 50);
+  --sidebar-primary: oklch(0.72 0.12 75);
+  --sidebar-primary-foreground: oklch(0.22 0.06 50);
+  --chart-1: oklch(0.72 0.12 75);
+  --chart-2: oklch(0.55 0.12 75);
+  --chart-3: oklch(0.35 0.06 50);
+  --chart-4: oklch(0.85 0.09 75);
+  --chart-5: oklch(0.65 0.08 60);
+  --radius: 0.5rem;
+  --background: oklch(0.98 0.02 80);
+  --foreground: oklch(0.22 0.06 50);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
+  --card-foreground: oklch(0.22 0.06 50);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.22 0.06 50);
+  --secondary: oklch(0.94 0.04 80);
+  --secondary-foreground: oklch(0.35 0.06 50);
+  --muted: oklch(0.94 0.04 80);
+  --muted-foreground: oklch(0.55 0.04 60);
+  --accent: oklch(0.94 0.04 80);
+  --accent-foreground: oklch(0.22 0.06 50);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  --border: oklch(0.88 0.06 75);
+  --input: oklch(0.88 0.06 75);
+  --ring: oklch(0.72 0.12 75);
+  --sidebar: oklch(0.22 0.06 50);
+  --sidebar-foreground: oklch(0.94 0.04 80);
+  --sidebar-accent: oklch(0.30 0.06 50);
+  --sidebar-accent-foreground: oklch(0.94 0.04 80);
+  --sidebar-border: oklch(0.30 0.06 50);
+  --sidebar-ring: oklch(0.72 0.12 75);
 }
 
 .dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+  --primary: oklch(0.72 0.12 75);
+  --primary-foreground: oklch(0.18 0.03 50);
+  --sidebar-primary: oklch(0.72 0.12 75);
+  --sidebar-primary-foreground: oklch(0.18 0.03 50);
+  --background: oklch(0.18 0.03 50);
+  --foreground: oklch(0.94 0.04 80);
+  --card: oklch(0.22 0.04 50);
+  --card-foreground: oklch(0.94 0.04 80);
+  --popover: oklch(0.22 0.04 50);
+  --popover-foreground: oklch(0.94 0.04 80);
+  --secondary: oklch(0.28 0.04 50);
+  --secondary-foreground: oklch(0.94 0.04 80);
+  --muted: oklch(0.28 0.04 50);
+  --muted-foreground: oklch(0.65 0.04 60);
+  --accent: oklch(0.28 0.04 50);
+  --accent-foreground: oklch(0.94 0.04 80);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.04 50);
+  --input: oklch(0.28 0.04 50);
+  --ring: oklch(0.72 0.12 75);
+  --chart-1: oklch(0.72 0.12 75);
+  --chart-2: oklch(0.55 0.12 75);
+  --chart-3: oklch(0.35 0.06 50);
+  --chart-4: oklch(0.85 0.09 75);
+  --chart-5: oklch(0.65 0.08 60);
+  --sidebar: oklch(0.18 0.03 50);
+  --sidebar-foreground: oklch(0.94 0.04 80);
+  --sidebar-accent: oklch(0.28 0.04 50);
+  --sidebar-accent-foreground: oklch(0.94 0.04 80);
+  --sidebar-border: oklch(0.28 0.04 50);
+  --sidebar-ring: oklch(0.72 0.12 75);
 }
 
 @layer base {
@@ -119,6 +131,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Inter", "Noto Sans Arabic", sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Playfair Display", serif;
+  }
+  .font-arabic {
+    font-family: "Noto Sans Arabic", sans-serif;
+  }
+  [dir="rtl"] {
+    font-family: "Noto Sans Arabic", sans-serif;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -134,18 +156,49 @@
 }
 
 @layer components {
+  /* Gold shimmer animation */
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  .gold-shimmer {
+    background: linear-gradient(90deg, #C9A84C 0%, #E8D5A3 50%, #C9A84C 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+  /* Product card hover */
+  .product-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(201, 168, 76, 0.15);
+  }
+  /* Ornament divider */
+  .ornament-divider {
+    position: relative;
+    text-align: center;
+  }
+  .ornament-divider::before,
+  .ornament-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 35%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #C9A84C);
+  }
+  .ornament-divider::after {
+    background: linear-gradient(to left, transparent, #C9A84C);
+    right: 0;
+  }
+  .ornament-divider::before { left: 0; }
+
   /**
    * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
    */
   .container {
     width: 100%;
