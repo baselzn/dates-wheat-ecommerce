@@ -59,3 +59,5 @@
 ## Bug Fixes
 - [x] Fix /auth error: users table missing columns phone, passwordHash, isActive
 - [x] Create admin user baselbzn@gmail.com with bcrypt-hashed password and admin role
+- [x] Create /about (Our Story) page
+- [x] Create /contact page
