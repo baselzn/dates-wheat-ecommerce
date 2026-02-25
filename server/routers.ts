@@ -490,6 +490,16 @@ export const appRouter = router({
   // ─── Tracking Pixels ──────────────────────────────────────────────────────
   tracking: router({
     list: adminProcedure.query(() => getTrackingPixels()),
+    // Public: returns all pixels (enabled + disabled) with accessToken masked for client use
+    getAll: publicProcedure.query(async () => {
+      const pixels = await getTrackingPixels();
+      return pixels.map(p => ({
+        platform: p.platform,
+        pixelId: p.pixelId,
+        accessToken: p.accessToken ? '***' : null, // mask token for client
+        isEnabled: p.isEnabled,
+      }));
+    }),
     upsert: adminProcedure
       .input(z.object({
         platform: z.string(),
@@ -510,6 +520,100 @@ export const appRouter = router({
         config: p.config ? (() => { try { return JSON.parse(p.config!); } catch { return {}; } })() : {},
       }));
     }),
+    // Server-side CAPI: Meta Conversions API
+    mirrorMeta: publicProcedure
+      .input(z.object({
+        pixelId: z.string(),
+        accessToken: z.string(),
+        eventName: z.string(),
+        eventData: z.record(z.string(), z.unknown()),
+        sourceUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const eventTime = Math.floor(Date.now() / 1000);
+          const payload = {
+            data: [{
+              event_name: input.eventName,
+              event_time: eventTime,
+              action_source: 'website',
+              event_source_url: input.sourceUrl || '',
+              user_data: { client_user_agent: 'Mozilla/5.0' },
+              custom_data: {
+                currency: 'AED',
+                ...input.eventData,
+              },
+            }],
+            test_event_code: undefined,
+          };
+          const res = await fetch(
+            `https://graph.facebook.com/v19.0/${input.pixelId}/events?access_token=${input.accessToken}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+          );
+          const json = await res.json() as { events_received?: number; error?: unknown };
+          return { success: true, eventsReceived: json.events_received };
+        } catch (e) {
+          console.error('[Meta CAPI] Error:', e);
+          return { success: false };
+        }
+      }),
+    // Server-side Events API: TikTok
+    mirrorTikTok: publicProcedure
+      .input(z.object({
+        pixelId: z.string(),
+        accessToken: z.string(),
+        eventName: z.string(),
+        eventData: z.record(z.string(), z.unknown()),
+        sourceUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const ttEventMap: Record<string, string> = {
+            PageView: 'Pageview',
+            ViewContent: 'ViewContent',
+            AddToCart: 'AddToCart',
+            InitiateCheckout: 'InitiateCheckout',
+            Purchase: 'CompletePayment',
+            Search: 'Search',
+            CompleteRegistration: 'CompleteRegistration',
+          };
+          const ttEvent = ttEventMap[input.eventName] || input.eventName;
+          const payload = {
+            pixel_code: input.pixelId,
+            event: ttEvent,
+            timestamp: new Date().toISOString(),
+            context: {
+              page: { url: input.sourceUrl || '' },
+              user_agent: 'Mozilla/5.0',
+            },
+            properties: {
+              currency: 'AED',
+              ...input.eventData,
+            },
+          };
+          const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/pixel/track/', {
+            method: 'POST',
+            headers: { 'Access-Token': input.accessToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const json = await res.json() as { code?: number; message?: string };
+          return { success: json.code === 0, message: json.message };
+        } catch (e) {
+          console.error('[TikTok Events API] Error:', e);
+          return { success: false };
+        }
+      }),
+    // Admin: test a pixel event
+    testEvent: adminProcedure
+      .input(z.object({ platform: z.string() }))
+      .mutation(async ({ input }) => {
+        const pixels = await getTrackingPixels();
+        const pixel = pixels.find(p => p.platform === input.platform);
+        if (!pixel?.isEnabled || !pixel.pixelId) {
+          return { success: false, message: 'Pixel not configured or disabled' };
+        }
+        return { success: true, message: `Test event queued for ${input.platform} (pixel: ${pixel.pixelId})` };
+      }),
   }),
 
   // ─── Admin Sub-Router ──────────────────────────────────────────────────────

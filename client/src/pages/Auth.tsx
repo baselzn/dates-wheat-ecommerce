@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import { usePixelTrack } from "@/components/PixelManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 export default function Auth() {
+  const { track } = usePixelTrack();
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
 
@@ -70,6 +72,7 @@ export default function Auth() {
     try {
       await verifyOtp.mutateAsync({ phone, code: otp });
       await utils.auth.me.invalidate();
+      track("CompleteRegistration", { method: "otp", currency: "AED", value: 0 });
       toast.success("Welcome back!");
       navigate("/");
     } catch (err: unknown) {

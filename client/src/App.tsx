@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { PixelManagerProvider } from "./components/PixelManager";
 
 // Customer pages
 import Home from "./pages/Home";
@@ -26,6 +27,7 @@ import AdminCategories from "./pages/admin/Categories";
 import AdminCoupons from "./pages/admin/Coupons";
 import AdminSettings from "./pages/admin/Settings";
 import AdminAnalytics from "./pages/admin/Analytics";
+import AdminTracking from "./pages/admin/Tracking";
 
 function Router() {
   return (
@@ -53,6 +55,7 @@ function Router() {
       <Route path="/admin/coupons" component={AdminCoupons} />
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
+      <Route path="/admin/tracking" component={AdminTracking} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />
@@ -66,8 +69,10 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          <Toaster richColors position="top-right" />
-          <Router />
+          <PixelManagerProvider>
+            <Toaster richColors position="top-right" />
+            <Router />
+          </PixelManagerProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,4 +1,6 @@
 import Layout from "@/components/Layout";
+import { useEffect } from "react";
+import { usePixelTrack } from "@/components/PixelManager";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +20,18 @@ const UAE_EMIRATES = [
 ];
 
 export default function Checkout() {
+  const { track } = usePixelTrack();
   const { items, getSubtotal, getVat, getShipping, getTotal, discountAmount, couponCode, clearCart } = useCartStore();
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  useEffect(() => {
+    track("InitiateCheckout", {
+      value: getTotal(),
+      currency: "AED",
+      num_items: items.reduce((s, i) => s + i.quantity, 0),
+      content_ids: items.map(i => String(i.productId)),
+    });
+  }, []);
 
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "cod">("cod");
   const [step, setStep] = useState<"shipping" | "payment" | "review">("shipping");

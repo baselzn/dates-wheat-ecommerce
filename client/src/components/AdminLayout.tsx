@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Box, ChevronRight, Home, LayoutDashboard, LogOut,
-  Package, Settings, ShoppingCart, Tag, Users, Warehouse
+  Package, Radio, Settings, ShoppingCart, Tag, Users, Warehouse
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Inventory", href: "/admin/inventory", icon: Warehouse },
   { label: "Coupons", href: "/admin/coupons", icon: Tag },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { label: "Tracking", href: "/admin/tracking", icon: Radio },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

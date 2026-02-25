@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 export default function Shop() {
+  const { track } = usePixelTrack();
+  useEffect(() => { track("PageView", { page_path: "/shop", page_title: "Shop" }); }, []);
   const [location] = useLocation();
   const params = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "");
 

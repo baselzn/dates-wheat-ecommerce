@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

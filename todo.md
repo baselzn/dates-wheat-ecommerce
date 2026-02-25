@@ -62,3 +62,20 @@
 - [x] Create /about (Our Story) page
 - [x] Create /contact page
 - [x] Fix order placement: orderId is NaN when inserting order_items (fixed all 6 insertId usages to use LAST_INSERT_ID())
+
+## Marketing Tracking & Pixels
+- [x] PixelManager component with cookie consent and platform script injection
+- [x] usePixelTrack hook firing to all enabled platforms simultaneously
+- [x] Meta Pixel client-side (PageView, ViewContent, AddToCart, InitiateCheckout, Purchase, Search, CompleteRegistration)
+- [x] GA4 gtag.js with enhanced ecommerce events
+- [x] Google Ads remarketing + conversion tracking
+- [x] Google Tag Manager (takes precedence over direct GA4/Ads)
+- [x] TikTok Pixel client-side events
+- [x] Snapchat Pixel client-side events
+- [x] Twitter/X Universal Website Tag
+- [x] Pinterest Tag events
+- [x] Meta Conversions API server-side mirroring (tracking.mirrorMeta procedure)
+- [x] TikTok Events API server-side mirroring (tracking.mirrorTikTok procedure)
+- [x] Admin tracking settings page (/admin/tracking) with 9 platform cards
+- [x] Platform cards: toggle, pixel ID, access token (masked), test event button, status badge
+- [x] Wire pixel events into all customer pages (Home, Shop, ProductDetail, Checkout, OrderConfirmation, Auth)

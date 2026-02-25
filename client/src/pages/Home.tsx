@@ -5,8 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Award, Gift, Leaf, ShieldCheck, Star, Truck } from "lucide-react";
 import { Link } from "wouter";
-
+import { useEffect } from "react";
+import { usePixelTrack } from "@/components/PixelManager";
 export default function Home() {
+  const { track } = usePixelTrack();
+  useEffect(() => { track("PageView", { page_path: "/", page_title: "Home" }); }, []);
   const { data: featuredData } = trpc.products.list.useQuery({ isFeatured: true, limit: 8 });
   const { data: categories } = trpc.categories.list.useQuery();
   const { data: newArrivals } = trpc.products.list.useQuery({ limit: 4, sortBy: "newest" });

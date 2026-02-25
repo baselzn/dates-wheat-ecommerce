@@ -1,4 +1,6 @@
 import Layout from "@/components/Layout";
+import { usePixelTrack } from "@/components/PixelManager";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -16,8 +18,20 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function OrderConfirmation() {
+  const { track } = usePixelTrack();
   const { orderNumber } = useParams<{ orderNumber: string }>();
   const { data: order, isLoading } = trpc.orders.byNumber.useQuery(orderNumber || "");
+  useEffect(() => {
+    if (order) {
+      track("Purchase", {
+        value: Number(order.total),
+        currency: "AED",
+        num_items: order.items?.length || 0,
+        order_id: order.orderNumber,
+        content_ids: order.items?.map((i: { productId: number }) => String(i.productId)) || [],
+      });
+    }
+  }, [order?.id]);
 
   if (isLoading) {
     return (
