@@ -1,9 +1,14 @@
 import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
+import { createRequire } from "module";
+const _require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const firebaseAdmin: any = _require("firebase-admin");
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+
 import { getSessionCookieOptions } from "./_core/cookies";
 import { ENV } from "./_core/env";
 import { systemRouter } from "./_core/systemRouter";
@@ -41,6 +46,7 @@ import {
   getUserAddresses,
   getUserByEmail,
   getUserById,
+  getUserByOpenId,
   getUserByPhone,
   getUserOrders,
   getUsersWithOrderStats,
@@ -59,6 +65,13 @@ import {
   verifyOtp,
 } from "./db";
 import { storagePut } from "./storage";
+
+// ─── Firebase Admin Init ─────────────────────────────────────────────────────
+if (!firebaseAdmin.apps || firebaseAdmin.apps.length === 0) {
+  firebaseAdmin.initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+  });
+}
 
 // ─── Admin guard ─────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -125,6 +138,50 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
         return { success: true, user };
+      }),
+
+    // Firebase Phone Auth — verifies Firebase ID token and issues app JWT session
+    firebaseLogin: publicProcedure
+      .input(z.object({
+        idToken: z.string(),
+        phone: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Verify the Firebase ID token server-side
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let decodedToken: any;
+        try {
+          decodedToken = await firebaseAdmin.auth().verifyIdToken(input.idToken);
+        } catch {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid Firebase token. Please try again." });
+        }
+
+        const firebaseUid = decodedToken.uid;
+        const phoneFromToken = decodedToken.phone_number || input.phone;
+        const openId = `firebase_${firebaseUid}`;
+
+        // Upsert user — creates on first login, updates lastSignedIn on return visits
+        await upsertUser({
+          openId,
+          phone: phoneFromToken,
+          loginMethod: "firebase_otp",
+          lastSignedIn: new Date(),
+        });
+
+        // Fetch the user record
+        let finalUser = await getUserByPhone(phoneFromToken);
+        if (!finalUser) finalUser = await getUserByOpenId(openId);
+        if (!finalUser) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "User creation failed" });
+
+        // Issue our app JWT session cookie (30 days)
+        const token = jwt.sign(
+          { userId: finalUser.id, openId: finalUser.openId, role: finalUser.role },
+          ENV.cookieSecret,
+          { expiresIn: "30d" }
+        );
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
+        return { success: true, user: finalUser };
       }),
 
     // Admin email/password login

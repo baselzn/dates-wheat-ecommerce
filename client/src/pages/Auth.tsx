@@ -7,8 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Phone, Shield } from "lucide-react";
-import { useEffect, useState } from "react";
+import { sendFirebaseOtp, verifyFirebaseOtp, clearRecaptcha } from "@/lib/firebase";
+import type { ConfirmationResult } from "firebase/auth";
+import { Phone, Shield, ArrowLeft, Smartphone } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -17,21 +19,22 @@ export default function Auth() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
 
-  // OTP flow
+  // OTP flow state
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  // Admin login
+  // Admin login state
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
 
-  const sendOtp = trpc.auth.sendOtp.useMutation();
-  const verifyOtp = trpc.auth.verifyOtp.useMutation();
   const adminLogin = trpc.auth.adminLogin.useMutation();
+  const firebaseLogin = trpc.auth.firebaseLogin.useMutation();
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -45,43 +48,87 @@ export default function Auth() {
     }
   }, [countdown]);
 
+  // Cleanup reCAPTCHA on unmount
+  useEffect(() => {
+    return () => clearRecaptcha();
+  }, []);
+
+  const formatPhone = (raw: string): string => {
+    const digits = raw.replace(/\D/g, "");
+    // If user enters without country code (UAE), prepend +971
+    if (digits.startsWith("971")) return `+${digits}`;
+    if (digits.startsWith("0")) return `+971${digits.slice(1)}`;
+    return `+971${digits}`;
+  };
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) return;
     setOtpLoading(true);
     try {
-      const result = await sendOtp.mutateAsync({ phone });
+      const formattedPhone = formatPhone(phone);
+      const result = await sendFirebaseOtp(formattedPhone, "recaptcha-container");
+      setConfirmationResult(result);
       setOtpSent(true);
       setCountdown(60);
-      toast.success("OTP sent!", { description: "Check your phone for the verification code." });
-      // Dev mode: show OTP in toast
-      if (result.code) {
-        toast.info(`Dev OTP: ${result.code}`, { duration: 30000 });
-      }
+      toast.success("OTP sent!", {
+        description: `A 6-digit code was sent to ${formattedPhone}`,
+      });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send OTP";
-      toast.error(msg);
+      // Provide friendly error messages
+      if (msg.includes("invalid-phone-number")) {
+        toast.error("Invalid phone number. Please include country code (e.g. 0501234567).");
+      } else if (msg.includes("too-many-requests")) {
+        toast.error("Too many attempts. Please wait a few minutes and try again.");
+      } else if (msg.includes("billing-not-enabled")) {
+        toast.error("SMS service not enabled. Please contact support.");
+      } else {
+        toast.error(msg);
+      }
+      clearRecaptcha();
     } finally {
       setOtpLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    if (otp.length !== 6) return;
+    if (otp.length !== 6 || !confirmationResult) return;
     setOtpLoading(true);
     try {
-      await verifyOtp.mutateAsync({ phone, code: otp });
+      // Step 1: Verify OTP with Firebase and get ID token
+      const idToken = await verifyFirebaseOtp(confirmationResult, otp);
+
+      // Step 2: Exchange Firebase ID token for our app JWT session
+      await firebaseLogin.mutateAsync({ idToken, phone: formatPhone(phone) });
       await utils.auth.me.invalidate();
-      track("CompleteRegistration", { method: "otp", currency: "AED", value: 0 });
-      toast.success("Welcome back!");
+
+      track("CompleteRegistration", { method: "firebase_otp", currency: "AED", value: 0 });
+      toast.success("Welcome to Dates & Wheat! 🍯");
       navigate("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Invalid OTP";
-      toast.error(msg);
+      if (msg.includes("invalid-verification-code")) {
+        toast.error("Incorrect code. Please check and try again.");
+      } else if (msg.includes("code-expired")) {
+        toast.error("Code expired. Please request a new OTP.");
+        setOtpSent(false);
+        setOtp("");
+        clearRecaptcha();
+      } else {
+        toast.error(msg);
+      }
       setOtp("");
     } finally {
       setOtpLoading(false);
     }
+  };
+
+  const handleResend = () => {
+    setOtpSent(false);
+    setOtp("");
+    setConfirmationResult(null);
+    clearRecaptcha();
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -102,69 +149,127 @@ export default function Auth() {
 
   return (
     <Layout>
+      {/* Invisible reCAPTCHA container — must be in DOM */}
+      <div id="recaptcha-container" ref={recaptchaContainerRef} />
+
       <div className="min-h-[70vh] flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">
-          {/* Logo / Header */}
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="text-5xl mb-3">🍯</div>
-            <h1 className="text-2xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
+            <h1
+              className="text-2xl font-bold text-[#3E1F00]"
+              style={{ fontFamily: "Playfair Display, serif" }}
+            >
               Welcome to Dates & Wheat
             </h1>
-            <p className="text-muted-foreground mt-1">Sign in to your account</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Sign in or create an account to continue
+            </p>
           </div>
 
           <div className="bg-white rounded-2xl border border-[#E8D5A3] p-6 shadow-sm">
             <Tabs defaultValue="customer">
               <TabsList className="w-full mb-6 bg-[#F5ECD7]">
-                <TabsTrigger value="customer" className="flex-1 data-[state=active]:bg-[#C9A84C] data-[state=active]:text-white">
+                <TabsTrigger
+                  value="customer"
+                  className="flex-1 data-[state=active]:bg-[#C9A84C] data-[state=active]:text-white"
+                >
                   <Phone className="h-4 w-4 mr-2" /> Customer
                 </TabsTrigger>
-                <TabsTrigger value="admin" className="flex-1 data-[state=active]:bg-[#3E1F00] data-[state=active]:text-white">
+                <TabsTrigger
+                  value="admin"
+                  className="flex-1 data-[state=active]:bg-[#3E1F00] data-[state=active]:text-white"
+                >
                   <Shield className="h-4 w-4 mr-2" /> Admin
                 </TabsTrigger>
               </TabsList>
 
-              {/* Customer OTP */}
+              {/* ── Customer: Firebase Phone OTP ── */}
               <TabsContent value="customer">
                 {!otpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-4">
+                  <form onSubmit={handleSendOtp} className="space-y-5">
+                    {/* Phone input */}
                     <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <div className="relative mt-1">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">+971</span>
+                      <Label htmlFor="phone" className="text-[#3E1F00] font-medium">
+                        Phone Number
+                      </Label>
+                      <div className="relative mt-1.5">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                          <span className="text-base">🇦🇪</span>
+                          <span className="text-sm text-muted-foreground font-medium">+971</span>
+                          <span className="text-muted-foreground/40">|</span>
+                        </div>
                         <Input
                           id="phone"
+                          type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="50 123 4567"
-                          className="pl-12 border-[#E8D5A3] focus:border-[#C9A84C]"
+                          className="pl-20 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
                           required
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">We'll send a 6-digit code to verify your number</p>
+                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                        <Smartphone className="h-3 w-3" />
+                        We'll send a 6-digit verification code via SMS
+                      </p>
                     </div>
+
                     <Button
                       type="submit"
                       disabled={otpLoading || !phone.trim()}
-                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11"
+                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
                     >
                       {otpLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                          Sending...
+                          Sending OTP...
                         </span>
-                      ) : "Send OTP"}
+                      ) : (
+                        "Send Verification Code"
+                      )}
                     </Button>
+
+                    {/* Powered by Firebase badge */}
+                    <p className="text-center text-xs text-muted-foreground">
+                      Secured by{" "}
+                      <span className="font-semibold text-[#F57C00]">Firebase</span> &amp; Google reCAPTCHA
+                    </p>
                   </form>
                 ) : (
                   <div className="space-y-5">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Enter the 6-digit code sent to <span className="font-semibold text-[#3E1F00]">{phone}</span>
+                    {/* Back button */}
+                    <button
+                      onClick={handleResend}
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#3E1F00] transition-colors"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Change number
+                    </button>
+
+                    {/* Instruction */}
+                    <div className="text-center bg-[#F5ECD7] rounded-xl p-4">
+                      <Smartphone className="h-8 w-8 text-[#C9A84C] mx-auto mb-2" />
+                      <p className="text-sm font-medium text-[#3E1F00]">
+                        Code sent to
+                      </p>
+                      <p className="text-base font-bold text-[#C9A84C] mt-0.5">
+                        {formatPhone(phone)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Enter the 6-digit code below
                       </p>
                     </div>
+
+                    {/* OTP input */}
                     <div className="flex justify-center">
-                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={setOtp}
+                        onComplete={handleVerifyOtp}
+                      >
                         <InputOTPGroup>
                           <InputOTPSlot index={0} />
                           <InputOTPSlot index={1} />
@@ -175,25 +280,33 @@ export default function Auth() {
                         </InputOTPGroup>
                       </InputOTP>
                     </div>
+
                     <Button
                       onClick={handleVerifyOtp}
                       disabled={otpLoading || otp.length !== 6}
-                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11"
+                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
                     >
                       {otpLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
                           Verifying...
                         </span>
-                      ) : "Verify OTP"}
+                      ) : (
+                        "Verify & Sign In"
+                      )}
                     </Button>
+
+                    {/* Resend */}
                     <div className="text-center">
                       {countdown > 0 ? (
-                        <p className="text-sm text-muted-foreground">Resend in {countdown}s</p>
+                        <p className="text-sm text-muted-foreground">
+                          Resend code in{" "}
+                          <span className="font-semibold text-[#C9A84C]">{countdown}s</span>
+                        </p>
                       ) : (
                         <button
-                          onClick={() => { setOtpSent(false); setOtp(""); }}
-                          className="text-sm text-[#C9A84C] hover:underline"
+                          onClick={handleResend}
+                          className="text-sm text-[#C9A84C] hover:underline font-medium"
                         >
                           Resend OTP
                         </button>
@@ -203,11 +316,13 @@ export default function Auth() {
                 )}
               </TabsContent>
 
-              {/* Admin Login */}
+              {/* ── Admin: Email + Password ── */}
               <TabsContent value="admin">
                 <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div>
-                    <Label htmlFor="adminEmail">Email</Label>
+                    <Label htmlFor="adminEmail" className="text-[#3E1F00] font-medium">
+                      Email Address
+                    </Label>
                     <Input
                       id="adminEmail"
                       type="email"
@@ -215,11 +330,13 @@ export default function Auth() {
                       onChange={(e) => setAdminEmail(e.target.value)}
                       placeholder="admin@datesandwheat.com"
                       required
-                      className="mt-1 border-[#E8D5A3] focus:border-[#C9A84C]"
+                      className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="adminPassword">Password</Label>
+                    <Label htmlFor="adminPassword" className="text-[#3E1F00] font-medium">
+                      Password
+                    </Label>
                     <Input
                       id="adminPassword"
                       type="password"
@@ -227,20 +344,22 @@ export default function Auth() {
                       onChange={(e) => setAdminPassword(e.target.value)}
                       placeholder="••••••••"
                       required
-                      className="mt-1 border-[#E8D5A3] focus:border-[#C9A84C]"
+                      className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
                     />
                   </div>
                   <Button
                     type="submit"
                     disabled={adminLoading}
-                    className="w-full bg-[#3E1F00] hover:bg-[#6B3A0F] text-white font-semibold h-11"
+                    className="w-full bg-[#3E1F00] hover:bg-[#6B3A0F] text-white font-semibold h-11 text-base"
                   >
                     {adminLoading ? (
                       <span className="flex items-center gap-2">
                         <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
                         Signing In...
                       </span>
-                    ) : "Admin Sign In"}
+                    ) : (
+                      "Admin Sign In"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -249,8 +368,13 @@ export default function Auth() {
 
           <p className="text-center text-xs text-muted-foreground mt-4">
             By continuing, you agree to our{" "}
-            <a href="/terms" className="text-[#C9A84C] hover:underline">Terms</a> and{" "}
-            <a href="/privacy" className="text-[#C9A84C] hover:underline">Privacy Policy</a>
+            <a href="/terms" className="text-[#C9A84C] hover:underline">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="text-[#C9A84C] hover:underline">
+              Privacy Policy
+            </a>
           </p>
         </div>
       </div>

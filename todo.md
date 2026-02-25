@@ -79,3 +79,12 @@
 - [x] Admin tracking settings page (/admin/tracking) with 9 platform cards
 - [x] Platform cards: toggle, pixel ID, access token (masked), test event button, status badge
 - [x] Wire pixel events into all customer pages (Home, Shop, ProductDetail, Checkout, OrderConfirmation, Auth)
+
+## Firebase Phone Auth Integration [COMPLETED]
+- [x] Install Firebase SDK (firebase + firebase-admin packages)
+- [x] Add Firebase config secrets (apiKey, authDomain, projectId, appId)
+- [x] Build Firebase phone auth flow in Auth.tsx (invisible reCAPTCHA + 6-digit OTP)
+- [x] Update server auth router: firebaseLogin procedure verifies Firebase ID tokens via Admin SDK
+- [x] Update user upsert to handle Firebase UID as openId (firebase_{uid})
+- [x] 25 vitest tests passing (4 new Firebase tests)
+- [x] Zero TypeScript errors
