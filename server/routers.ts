@@ -1114,7 +1114,11 @@ export const appRouter = router({
         icon: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const webpush = await import("web-push");
+        // web-push is a CJS module; when dynamically imported in an ESM context
+        // the real API lives on .default — fall back to the module itself for safety.
+        const webpushMod = await import("web-push");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const webpush: any = (webpushMod as any).default ?? webpushMod;
         webpush.setVapidDetails(
           "mailto:info@datesandwheat.com",
           process.env.VAPID_PUBLIC_KEY!,
