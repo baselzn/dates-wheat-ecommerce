@@ -17,6 +17,9 @@ interface CartStore {
   items: CartItem[];
   couponCode: string;
   discountAmount: number;
+  isCartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
   addItem: (item: CartItem) => void;
   removeItem: (productId: number, variantId?: number) => void;
   updateQuantity: (productId: number, variantId: number | undefined, quantity: number) => void;
@@ -40,6 +43,9 @@ export const useCartStore = create<CartStore>()(
       items: [],
       couponCode: "",
       discountAmount: 0,
+      isCartOpen: false,
+      openCart: () => set({ isCartOpen: true }),
+      closeCart: () => set({ isCartOpen: false }),
 
       addItem: (newItem) => {
         set((state) => {

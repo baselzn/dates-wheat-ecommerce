@@ -38,6 +38,7 @@ export default function ProductCard({
   reviewCount = 0,
 }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
+  const openCart = useCartStore((s) => s.openCart);
   const [wishlist, setWishlist] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -61,11 +62,10 @@ export default function ProductCard({
       slug,
       productImage: image,
     });
-    toast.success("Added to cart!", {
-      description: nameEn,
-      duration: 2000,
-    });
-    setTimeout(() => setAdding(false), 600);
+    setTimeout(() => {
+      setAdding(false);
+      openCart();
+    }, 400);
   };
 
   return (

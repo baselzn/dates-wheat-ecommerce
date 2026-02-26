@@ -3,7 +3,7 @@ import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { ArrowRight, Award, Gift, Leaf, ShieldCheck, Star, Truck } from "lucide-react";
+import { ArrowRight, Award, ChevronRight, Gift, Leaf, ShieldCheck, Star, Truck } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect } from "react";
 import { usePixelTrack } from "@/components/PixelManager";
@@ -29,92 +29,100 @@ export default function Home() {
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-[#3E1F00] via-[#6B3A0F] to-[#3E1F00] text-white overflow-hidden">
-        {/* Decorative pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23C9A84C' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-        </div>
-
-        <div className="container relative py-20 lg:py-28">
+      {/* ── Hero Section ── */}
+      <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1A0A00 0%, #3E1F00 45%, #5C2D0A 100%)" }}>
+        {/* Decorative Arabic pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.06]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C9A84C' fill-opacity='1'%3E%3Cpath d='M40 0L50 10L40 20L30 10L40 0ZM40 60L50 70L40 80L30 70L40 60ZM0 40L10 30L20 40L10 50L0 40ZM60 40L70 30L80 40L70 50L60 40Z'/%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+        {/* Gold accent line at top */}
+        <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, transparent, #C9A84C, #E8C76A, #C9A84C, transparent)" }} />
+        <div className="container relative py-16 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <Badge className="bg-[#C9A84C]/20 text-[#E8D5A3] border-[#C9A84C]/30 mb-4">
-                ✨ Premium Arabic Confectionery Since 1990
-              </Badge>
+            <div className="text-white">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#C9A84C]/40 bg-[#C9A84C]/10 mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C9A84C] animate-pulse" />
+                <span className="text-[#E8D5A3] text-sm font-medium">Premium Arabic Confectionery Since 1990</span>
+              </div>
               <h1 className="text-4xl lg:text-6xl font-bold leading-tight mb-4" style={{ fontFamily: "Playfair Display, serif" }}>
-                Taste the <span className="text-[#C9A84C]">Tradition</span> of Arabia
+                Taste the <br />
+                <span style={{ background: "linear-gradient(135deg, #C9A84C 0%, #E8C76A 50%, #C9A84C 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  Tradition
+                </span>
+                {" "}of Arabia
               </h1>
-              <p className="text-xl font-arabic text-[#E8D5A3]/90 mb-2" dir="rtl">
+              <p className="text-xl font-arabic text-[#E8D5A3]/90 mb-3 leading-relaxed" dir="rtl">
                 تمر وقمح — أصالة وجودة منذ ١٩٩٠
               </p>
-              <p className="text-[#E8D5A3]/80 text-lg mb-8 leading-relaxed">
-                Handcrafted Maamoul, Arabic sweets, gluten-free delights, and luxury gift boxes. 
+              <p className="text-[#E8D5A3]/75 text-lg mb-8 leading-relaxed max-w-lg">
+                Handcrafted Maamoul, Arabic sweets, gluten-free delights, and luxury gift boxes.
                 Made with love in Fujairah, UAE.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Button
-                  asChild
-                  size="lg"
-                  className="bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold px-8"
-                >
+                <Button asChild size="lg"
+                  className="text-[#3E1F00] font-bold px-8 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  style={{ background: "linear-gradient(135deg, #C9A84C, #E8C76A, #C9A84C)" }}>
                   <Link href="/shop">
                     Shop Now <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="border-[#E8D5A3] text-[#E8D5A3] hover:bg-[#E8D5A3]/10 bg-transparent"
-                >
+                <Button asChild size="lg" variant="outline"
+                  className="border-[#C9A84C]/50 text-[#E8D5A3] hover:bg-[#C9A84C]/10 hover:border-[#C9A84C] transition-all bg-transparent">
                   <Link href="/about">Our Story</Link>
                 </Button>
               </div>
-
-              {/* Stats */}
-              <div className="flex gap-8 mt-10 pt-8 border-t border-[#C9A84C]/20">
+              <div className="flex gap-8 mt-10 pt-8 border-t border-white/10">
                 {[
-                  { value: "35+", label: "Years of Craft" },
-                  { value: "50+", label: "Sweet Varieties" },
+                  { value: "35+", label: "Years of Tradition" },
+                  { value: "50+", label: "Unique Products" },
                   { value: "10K+", label: "Happy Customers" },
-                ].map((stat) => (
+                ].map(stat => (
                   <div key={stat.label}>
                     <p className="text-2xl font-bold text-[#C9A84C]">{stat.value}</p>
-                    <p className="text-sm text-[#E8D5A3]/70">{stat.label}</p>
+                    <p className="text-xs text-[#E8D5A3]/60 mt-0.5">{stat.label}</p>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Hero image / decorative */}
-            <div className="hidden lg:flex items-center justify-center">
-              <div className="relative w-80 h-80">
-                <div className="absolute inset-0 rounded-full bg-[#C9A84C]/20 animate-pulse" />
-                <div className="absolute inset-4 rounded-full bg-[#C9A84C]/10" />
-                <div className="absolute inset-0 flex items-center justify-center text-9xl">
-                  🍯
+            <div className="relative hidden lg:block">
+              <div className="relative">
+                <div className="w-80 h-80 mx-auto rounded-full overflow-hidden border-4 border-[#C9A84C]/30 shadow-2xl"
+                  style={{ boxShadow: "0 0 80px rgba(201,168,76,0.3)" }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600"
+                    alt="Premium Arabic Sweets"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                {/* Floating badges */}
-                <div className="absolute -top-4 -right-4 bg-white rounded-xl p-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 fill-[#C9A84C] text-[#C9A84C]" />
-                    <span className="text-sm font-bold text-[#3E1F00]">4.9/5</span>
+                <div className="absolute top-4 -left-4 bg-white rounded-xl px-3 py-2 shadow-lg flex items-center gap-2">
+                  <span className="text-2xl">🍯</span>
+                  <div>
+                    <p className="text-xs font-bold text-[#3E1F00]">Maamoul</p>
+                    <p className="text-[10px] text-[#C9A84C]">Best Seller</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Customer Rating</p>
                 </div>
-                <div className="absolute -bottom-4 -left-4 bg-white rounded-xl p-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-bold text-[#3E1F00]">100% Natural</span>
+                <div className="absolute bottom-8 -right-4 bg-white rounded-xl px-3 py-2 shadow-lg flex items-center gap-2">
+                  <span className="text-2xl">✨</span>
+                  <div>
+                    <p className="text-xs font-bold text-[#3E1F00]">Gift Boxes</p>
+                    <p className="text-[10px] text-[#C9A84C]">From AED 85</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">No preservatives</p>
+                </div>
+                <div className="absolute top-1/2 -right-8 bg-[#C9A84C] rounded-xl px-3 py-2 shadow-lg">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-white text-white" />
+                    <span className="text-xs font-bold text-white">4.9/5</span>
+                  </div>
+                  <p className="text-[10px] text-white/80">1,200+ reviews</p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        <div className="h-12 relative overflow-hidden">
+          <svg viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="absolute bottom-0 w-full">
+            <path d="M0 48L60 40C120 32 240 16 360 12C480 8 600 16 720 20C840 24 960 24 1080 20C1200 16 1320 8 1380 4L1440 0V48H1380C1320 48 1200 48 1080 48C960 48 840 48 720 48C600 48 480 48 360 48C240 48 120 48 60 48H0Z" fill="#FFF8F0"/>
+          </svg>
         </div>
       </section>
 
@@ -142,20 +150,28 @@ export default function Home() {
         <section className="py-16 bg-[#FFF8F0]">
           <div className="container">
             <div className="text-center mb-10">
-              <p className="text-[#C9A84C] text-sm font-semibold uppercase tracking-widest mb-2">Browse by Category</p>
+              <Badge className="bg-[#C9A84C]/10 text-[#C9A84C] border-[#C9A84C]/20 mb-3">Browse Categories</Badge>
               <h2 className="text-3xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
-                Our Collections
+                Explore Our Collection
               </h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {categories.map((cat) => (
-                <Link key={cat.slug} href={`/shop?category=${cat.slug}`}>
-                  <div className="group bg-white rounded-xl p-6 border border-[#E8D5A3] hover:border-[#C9A84C] hover:shadow-md transition-all cursor-pointer text-center">
-                    <div className="w-14 h-14 rounded-full bg-[#F5ECD7] flex items-center justify-center text-3xl mx-auto mb-3 group-hover:bg-[#E8D5A3] transition-colors">
-                      {getCategoryEmoji(cat.slug)}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {categories.slice(0, 8).map((cat) => (
+                <Link key={cat.slug} href={`/shop/category/${cat.slug}`}>
+                  <div className="group relative overflow-hidden rounded-2xl aspect-square cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1" style={{ background: "linear-gradient(135deg, #3E1F00, #6B3A0F)" }}>
+                    {cat.imageUrl ? (
+                      <img src={cat.imageUrl} alt={cat.nameEn} className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-30">{getCategoryEmoji(cat.slug)}</div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="text-white font-bold text-sm">{cat.nameEn}</p>
+                      {cat.nameAr && <p className="text-[#E8D5A3]/80 text-xs font-arabic mt-0.5" dir="rtl">{cat.nameAr}</p>}
                     </div>
-                    <h3 className="font-semibold text-[#3E1F00] text-sm">{cat.nameEn}</h3>
-                    <p className="text-xs text-[#C9A84C] font-arabic mt-1" dir="rtl">{cat.nameAr}</p>
+                    <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#C9A84C]/20 border border-[#C9A84C]/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight className="h-3 w-3 text-[#C9A84C]" />
+                    </div>
                   </div>
                 </Link>
               ))}

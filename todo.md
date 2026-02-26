@@ -90,3 +90,11 @@
 - [x] Zero TypeScript errors
 - [x] Fix reCAPTCHA "already rendered" error in Auth.tsx — singleton verifier with body-appended container, proper reset on resend
 - [x] Fix auth/captcha-check-failed: improved error message shows exact domain to add in Firebase Console
+
+## Design Refresh & New Features
+- [x] Modern design: gradient hero with Arabic pattern overlay, floating product badges, modern category cards with hover effects, luxury brand story section
+- [x] Sliding side cart drawer — auto-opens when products are added, global state via cartStore (isCartOpen/openCart/closeCart)
+- [x] Advanced discount rules engine (BOGO, cart total, category, quantity tiers, user role, first order, free shipping, schedule, priority)
+- [x] WooCommerce REST API product importer in admin panel (test connection, fetch/import categories, fetch/import products with images, pagination)
+- [x] 33 vitest tests passing (8 new tests for discount rules + WooCommerce importer)
+- [x] Zero TypeScript errors

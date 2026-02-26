@@ -28,6 +28,8 @@ import AdminCoupons from "./pages/admin/Coupons";
 import AdminSettings from "./pages/admin/Settings";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTracking from "./pages/admin/Tracking";
+import AdminDiscountRules from "./pages/admin/DiscountRules";
+import AdminWooImporter from "./pages/admin/WooImporter";
 
 function Router() {
   return (
@@ -56,6 +58,8 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/analytics" component={AdminAnalytics} />
       <Route path="/admin/tracking" component={AdminTracking} />
+      <Route path="/admin/discount-rules" component={AdminDiscountRules} />
+      <Route path="/admin/woo-importer" component={AdminWooImporter} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />

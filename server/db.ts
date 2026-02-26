@@ -5,6 +5,7 @@ import {
   cartItems,
   categories,
   coupons,
+  discountRules,
   InsertUser,
   orderItems,
   orders,
@@ -717,4 +718,162 @@ export async function getDashboardStats() {
     ordersByStatus: ordersByStatusResult.map(r => ({ status: r.status, count: Number(r.count) })),
     lowStockProducts: lowStockResult,
   };
+}
+
+// ─── Discount Rules ───────────────────────────────────────────────────────────
+export async function getDiscountRules(activeOnly = false) {
+  const db = await getDb();
+  if (!db) return [];
+  if (activeOnly) {
+    return db.select().from(discountRules).where(eq(discountRules.isActive, true)).orderBy(desc(discountRules.priority));
+  }
+  return db.select().from(discountRules).orderBy(desc(discountRules.priority));
+}
+
+export async function getDiscountRuleById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(discountRules).where(eq(discountRules.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertDiscountRule(data: {
+  id?: number;
+  name: string;
+  description?: string;
+  type: "cart_total" | "bogo" | "quantity_tier" | "category_discount" | "product_discount" | "user_role" | "first_order" | "free_shipping";
+  isActive: boolean;
+  priority: number;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+  usageLimit?: number | null;
+  conditions: string;
+  actions: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  if (data.id) {
+    await db.update(discountRules).set({
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      isActive: data.isActive,
+      priority: data.priority,
+      startsAt: data.startsAt ?? null,
+      endsAt: data.endsAt ?? null,
+      usageLimit: data.usageLimit ?? null,
+      conditions: data.conditions,
+      actions: data.actions,
+    }).where(eq(discountRules.id, data.id));
+    return data.id;
+  }
+  await db.insert(discountRules).values({
+    name: data.name,
+    description: data.description,
+    type: data.type,
+    isActive: data.isActive,
+    priority: data.priority,
+    startsAt: data.startsAt ?? null,
+    endsAt: data.endsAt ?? null,
+    usageLimit: data.usageLimit ?? null,
+    usedCount: 0,
+    conditions: data.conditions,
+    actions: data.actions,
+  });
+  const [[{ lid: ruleId }]] = await db.execute('SELECT LAST_INSERT_ID() as lid') as unknown as [[{ lid: number }]];
+  return Number(ruleId);
+}
+
+export async function deleteDiscountRule(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.delete(discountRules).where(eq(discountRules.id, id));
+}
+
+export async function applyDiscountRules(params: {
+  cartItems: Array<{ productId: number; categoryId: number; quantity: number; unitPrice: number; }>;
+  subtotal: number;
+  isFirstOrder?: boolean;
+}): Promise<{ totalDiscount: number; appliedRules: Array<{ id: number; name: string; discount: number }> }> {
+  const rules = await getDiscountRules(true);
+  const now = new Date();
+  let totalDiscount = 0;
+  const appliedRules: Array<{ id: number; name: string; discount: number }> = [];
+
+  for (const rule of rules) {
+    if (rule.startsAt && new Date(rule.startsAt) > now) continue;
+    if (rule.endsAt && new Date(rule.endsAt) < now) continue;
+    if (rule.usageLimit && rule.usedCount >= rule.usageLimit) continue;
+
+    let conditions: Record<string, unknown> = {};
+    let actions: Record<string, unknown> = {};
+    try { conditions = JSON.parse(rule.conditions); actions = JSON.parse(rule.actions); } catch { continue; }
+
+    let discount = 0;
+    switch (rule.type) {
+      case "cart_total": {
+        if (params.subtotal >= Number(conditions.minAmount ?? 0)) {
+          discount = actions.discountType === "percentage"
+            ? params.subtotal * (Number(actions.discountValue ?? 0) / 100)
+            : Number(actions.discountValue ?? 0);
+          if (actions.maxDiscount) discount = Math.min(discount, Number(actions.maxDiscount));
+        }
+        break;
+      }
+      case "quantity_tier": {
+        const totalQty = params.cartItems.reduce((s, i) => s + i.quantity, 0);
+        const tiers = (conditions.tiers as Array<{ minQty: number; discountPct: number }>) ?? [];
+        const tier = tiers.filter(t => totalQty >= t.minQty).sort((a, b) => b.minQty - a.minQty)[0];
+        if (tier) discount = params.subtotal * (tier.discountPct / 100);
+        break;
+      }
+      case "category_discount": {
+        const catItems = params.cartItems.filter(i => i.categoryId === Number(conditions.categoryId ?? 0));
+        const catSubtotal = catItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+        if (catSubtotal > 0) {
+          discount = actions.discountType === "percentage"
+            ? catSubtotal * (Number(actions.discountValue ?? 0) / 100)
+            : Number(actions.discountValue ?? 0);
+        }
+        break;
+      }
+      case "product_discount": {
+        const pItem = params.cartItems.find(i => i.productId === Number(conditions.productId ?? 0));
+        if (pItem) {
+          const pSub = pItem.unitPrice * pItem.quantity;
+          discount = actions.discountType === "percentage"
+            ? pSub * (Number(actions.discountValue ?? 0) / 100)
+            : Number(actions.discountValue ?? 0);
+        }
+        break;
+      }
+      case "bogo": {
+        const buyQty = Number(conditions.buyQty ?? 1);
+        const getQty = Number(conditions.getQty ?? 1);
+        const targetPid = conditions.productId ? Number(conditions.productId) : null;
+        const eligible = targetPid ? params.cartItems.filter(i => i.productId === targetPid) : params.cartItems;
+        for (const item of eligible) {
+          const sets = Math.floor(item.quantity / (buyQty + getQty));
+          discount += sets * getQty * item.unitPrice;
+        }
+        break;
+      }
+      case "first_order": {
+        if (params.isFirstOrder) {
+          discount = actions.discountType === "percentage"
+            ? params.subtotal * (Number(actions.discountValue ?? 0) / 100)
+            : Number(actions.discountValue ?? 0);
+        }
+        break;
+      }
+      case "free_shipping": {
+        if (params.subtotal >= Number(conditions.minAmount ?? 0)) {
+          discount = Number(actions.shippingDiscount ?? 0);
+        }
+        break;
+      }
+    }
+    if (discount > 0) { totalDiscount += discount; appliedRules.push({ id: rule.id, name: rule.name, discount }); }
+  }
+  return { totalDiscount, appliedRules };
 }

@@ -29,6 +29,13 @@
       "when": 1771998340705,
       "tag": "0003_broken_lorna_dane",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1772064754793,
+      "tag": "0004_safe_rick_jones",
+      "breakpoints": true
     }
   ]
 }

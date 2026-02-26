@@ -4,7 +4,10 @@ import bcrypt from "bcryptjs";
 import { createRequire } from "module";
 const _require = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const firebaseAdmin: any = _require("firebase-admin");
+const _faRaw: any = _require("firebase-admin");
+// firebase-admin exports differently depending on ESM/CJS context
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const firebaseAdmin: any = (_faRaw.default && typeof _faRaw.default.initializeApp === "function") ? _faRaw.default : _faRaw;
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -63,8 +66,36 @@ import {
   upsertTrackingPixel,
   upsertUser,
   verifyOtp,
+  applyDiscountRules,
+  deleteDiscountRule,
+  getDiscountRuleById,
+  getDiscountRules,
+  upsertDiscountRule,
 } from "./db";
 import { storagePut } from "./storage";
+
+// WooCommerce product type
+interface WooProduct {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  description: string;
+  short_description: string;
+  sku: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  stock_quantity: number | null;
+  in_stock: boolean;
+  images: Array<{ id: number; src: string; alt: string }>;
+  categories: Array<{ id: number; name: string; slug: string }>;
+  tags: Array<{ id: number; name: string; slug: string }>;
+  attributes: Array<{ id: number; name: string; options: string[] }>;
+  variations: number[];
+  weight: string;
+  dimensions: { length: string; width: string; height: string };
+}
 
 // ─── Firebase Admin Init ─────────────────────────────────────────────────────
 if (!firebaseAdmin.apps || firebaseAdmin.apps.length === 0) {
@@ -848,6 +879,201 @@ export const appRouter = router({
           return { success: true };
         }),
     }),
+  }),
+
+  // ─── Discount Rules ─────────────────────────────────────────────────────
+  discountRules: router({
+    list: adminProcedure.query(() => getDiscountRules(false)),
+    listActive: publicProcedure.query(() => getDiscountRules(true)),
+    byId: adminProcedure.input(z.number()).query(({ input }) => getDiscountRuleById(input)),
+    upsert: adminProcedure
+      .input(z.object({
+        id: z.number().optional(),
+        name: z.string(),
+        description: z.string().optional(),
+        type: z.enum(["cart_total", "bogo", "quantity_tier", "category_discount", "product_discount", "user_role", "first_order", "free_shipping"]),
+        isActive: z.boolean(),
+        priority: z.number(),
+        startsAt: z.date().optional().nullable(),
+        endsAt: z.date().optional().nullable(),
+        usageLimit: z.number().optional().nullable(),
+        conditions: z.string(),
+        actions: z.string(),
+      }))
+      .mutation(({ input }) => upsertDiscountRule(input)),
+    delete: adminProcedure.input(z.number()).mutation(({ input }) => deleteDiscountRule(input)),
+    calculate: publicProcedure
+      .input(z.object({
+        cartItems: z.array(z.object({
+          productId: z.number(),
+          categoryId: z.number(),
+          quantity: z.number(),
+          unitPrice: z.number(),
+        })),
+        subtotal: z.number(),
+        isFirstOrder: z.boolean().optional(),
+      }))
+      .mutation(({ input }) => applyDiscountRules(input)),
+  }),
+
+  // ─── WooCommerce Importer ────────────────────────────────────────────────
+  woocommerce: router({
+    testConnection: adminProcedure
+      .input(z.object({
+        storeUrl: z.string().url(),
+        consumerKey: z.string(),
+        consumerSecret: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { storeUrl, consumerKey, consumerSecret } = input;
+        const base = storeUrl.replace(/\/$/, "");
+        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+        const res = await fetch(`${base}/wp-json/wc/v3/system_status`, {
+          headers: { Authorization: `Basic ${auth}` },
+        });
+        if (!res.ok) throw new TRPCError({ code: "BAD_REQUEST", message: `WooCommerce connection failed: ${res.status} ${res.statusText}` });
+        const data = await res.json() as { environment?: { wp_version?: string; wc_version?: string } };
+        return { success: true, wpVersion: data.environment?.wp_version, wcVersion: data.environment?.wc_version };
+      }),
+
+    fetchProducts: adminProcedure
+      .input(z.object({
+        storeUrl: z.string().url(),
+        consumerKey: z.string(),
+        consumerSecret: z.string(),
+        page: z.number().default(1),
+        perPage: z.number().default(20),
+      }))
+      .mutation(async ({ input }) => {
+        const { storeUrl, consumerKey, consumerSecret, page, perPage } = input;
+        const base = storeUrl.replace(/\/$/, "");
+        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+        const url = `${base}/wp-json/wc/v3/products?page=${page}&per_page=${perPage}&status=publish`;
+        const res = await fetch(url, { headers: { Authorization: `Basic ${auth}` } });
+        if (!res.ok) throw new TRPCError({ code: "BAD_REQUEST", message: `Failed to fetch products: ${res.status}` });
+        const wooProducts = await res.json() as WooProduct[];
+        const totalPages = Number(res.headers.get("X-WP-TotalPages") || 1);
+        const totalProducts = Number(res.headers.get("X-WP-Total") || 0);
+        return { products: wooProducts, totalPages, totalProducts, currentPage: page };
+      }),
+
+    importProducts: adminProcedure
+      .input(z.object({
+        storeUrl: z.string().url(),
+        consumerKey: z.string(),
+        consumerSecret: z.string(),
+        productIds: z.array(z.number()),
+        defaultCategoryId: z.number(),
+        importImages: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        const { storeUrl, consumerKey, consumerSecret, productIds, defaultCategoryId, importImages } = input;
+        const base = storeUrl.replace(/\/$/, "");
+        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+        const results: { id: number; name: string; status: "imported" | "updated" | "failed"; error?: string }[] = [];
+
+        for (const wooId of productIds) {
+          try {
+            const res = await fetch(`${base}/wp-json/wc/v3/products/${wooId}`, {
+              headers: { Authorization: `Basic ${auth}` },
+            });
+            if (!res.ok) { results.push({ id: wooId, name: "", status: "failed", error: `HTTP ${res.status}` }); continue; }
+            const p = await res.json() as WooProduct;
+
+            // Map WooCommerce category to local category
+            let categoryId = defaultCategoryId;
+            if (p.categories?.length) {
+              const wooSlug = p.categories[0].slug;
+              const dbCats = await getCategories(false);
+              const match = dbCats.find(c => c.slug === wooSlug || c.nameEn.toLowerCase() === p.categories[0].name.toLowerCase());
+              if (match) categoryId = match.id;
+            }
+
+            // Collect images
+            const images: string[] = [];
+            if (importImages && p.images?.length) {
+              images.push(...p.images.slice(0, 5).map(img => img.src));
+            }
+
+            const slug = p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+            const basePrice = p.sale_price || p.regular_price || p.price || "0";
+            const comparePrice = p.sale_price && p.regular_price ? p.regular_price : undefined;
+
+            const productId = await upsertProduct({
+              categoryId,
+              nameEn: p.name,
+              nameAr: p.name,
+              slug,
+              descriptionEn: p.short_description?.replace(/<[^>]+>/g, "") || p.description?.replace(/<[^>]+>/g, ""),
+              basePrice,
+              comparePrice,
+              images: images.length ? JSON.stringify(images) : undefined,
+              isActive: p.status === "publish",
+              stockQty: p.stock_quantity ?? (p.in_stock ? 100 : 0),
+              sku: p.sku || undefined,
+              tags: p.tags?.map(t => t.name).join(",") || undefined,
+            });
+
+            results.push({ id: wooId, name: p.name, status: "imported" });
+          } catch (err) {
+            results.push({ id: wooId, name: "", status: "failed", error: String(err) });
+          }
+        }
+        return { results, imported: results.filter(r => r.status === "imported").length, failed: results.filter(r => r.status === "failed").length };
+      }),
+
+    fetchCategories: adminProcedure
+      .input(z.object({
+        storeUrl: z.string().url(),
+        consumerKey: z.string(),
+        consumerSecret: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { storeUrl, consumerKey, consumerSecret } = input;
+        const base = storeUrl.replace(/\/$/, "");
+        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+        const res = await fetch(`${base}/wp-json/wc/v3/products/categories?per_page=100`, {
+          headers: { Authorization: `Basic ${auth}` },
+        });
+        if (!res.ok) throw new TRPCError({ code: "BAD_REQUEST", message: `Failed to fetch categories: ${res.status}` });
+        const cats = await res.json() as Array<{ id: number; name: string; slug: string; image?: { src: string } | null; count: number }>;
+        return cats.filter(c => c.slug !== "uncategorized");
+      }),
+
+    importCategories: adminProcedure
+      .input(z.object({
+        storeUrl: z.string().url(),
+        consumerKey: z.string(),
+        consumerSecret: z.string(),
+        categoryIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input }) => {
+        const { storeUrl, consumerKey, consumerSecret, categoryIds } = input;
+        const base = storeUrl.replace(/\/$/, "");
+        const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
+        const results: { id: number; name: string; status: string }[] = [];
+        for (const wooId of categoryIds) {
+          try {
+            const res = await fetch(`${base}/wp-json/wc/v3/products/categories/${wooId}`, {
+              headers: { Authorization: `Basic ${auth}` },
+            });
+            if (!res.ok) { results.push({ id: wooId, name: "", status: "failed" }); continue; }
+            const c = await res.json() as { id: number; name: string; slug: string; image?: { src: string } | null; description?: string };
+            await upsertCategory({
+              nameEn: c.name,
+              nameAr: c.name,
+              slug: c.slug,
+              description: c.description?.replace(/<[^>]+>/g, ""),
+              imageUrl: c.image?.src || undefined,
+              isActive: true,
+            });
+            results.push({ id: wooId, name: c.name, status: "imported" });
+          } catch (err) {
+            results.push({ id: wooId, name: "", status: "failed" });
+          }
+        }
+        return { results, imported: results.filter(r => r.status === "imported").length };
+      }),
   }),
 
   // ─── Page Views ───────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Box, ChevronRight, Home, LayoutDashboard, LogOut,
-  Package, Radio, Settings, ShoppingCart, Tag, Users, Warehouse
+  Package, Percent, Radio, Settings, ShoppingCart, Tag, Users, Warehouse
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { label: "Categories", href: "/admin/categories", icon: Tag },
   { label: "Inventory", href: "/admin/inventory", icon: Warehouse },
   { label: "Coupons", href: "/admin/coupons", icon: Tag },
+  { label: "Discount Rules", href: "/admin/discount-rules", icon: Percent },
+  { label: "WooCommerce Import", href: "/admin/woo-importer", icon: Package },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Tracking", href: "/admin/tracking", icon: Radio },
   { label: "Settings", href: "/admin/settings", icon: Settings },

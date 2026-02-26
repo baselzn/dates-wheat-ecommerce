@@ -254,3 +254,31 @@ export const pageViews = mysqlTable("page_views", {
   ip: varchar("ip", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+// ─── Discount Rules ───────────────────────────────────────────────────────────
+export const discountRules = mysqlTable("discount_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", [
+    "cart_total",
+    "bogo",
+    "quantity_tier",
+    "category_discount",
+    "product_discount",
+    "user_role",
+    "first_order",
+    "free_shipping",
+  ]).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  priority: int("priority").default(0).notNull(),
+  startsAt: timestamp("startsAt"),
+  endsAt: timestamp("endsAt"),
+  usageLimit: int("usageLimit"),
+  usedCount: int("usedCount").default(0).notNull(),
+  conditions: text("conditions").notNull(), // JSON string
+  actions: text("actions").notNull(),       // JSON string
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DiscountRule = typeof discountRules.$inferSelect;
+export type InsertDiscountRule = typeof discountRules.$inferInsert;
