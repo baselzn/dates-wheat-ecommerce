@@ -3,6 +3,7 @@ import Footer from "./Footer";
 import CartDrawer from "./CartDrawer";
 import MobileBottomNav from "./MobileBottomNav";
 import { PushNotificationPrompt } from "./PushNotificationPrompt";
+import PWAInstallBanner from "./PWAInstallBanner";
 import { useCartStore } from "@/stores/cartStore";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
@@ -32,6 +33,8 @@ export default function Layout({ children, hideFooter }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF8F0]">
+      {/* Android PWA install banner — sits above the header */}
+      <PWAInstallBanner />
       <Header onCartOpen={openCart} />
       <main className="flex-1">{children}</main>
       {!hideFooter && <Footer />}

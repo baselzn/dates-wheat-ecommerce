@@ -106,3 +106,10 @@
 - [x] Push notification subscription flow (VAPID keys, server endpoint, frontend permission prompt with 5s delay)
 - [x] Server-side push notification sender (web-push library)
 - [x] Admin UI to send push notifications to all subscribers (with quick templates + delivery stats)
+
+## iOS Add to Home Screen
+- [x] iOS A2HS detection (Safari on iPhone/iPad, not already installed as PWA)
+- [x] iOS bottom sheet with 3-step visual guide (Share → Add to Home Screen → Add) + arrow pointing to Safari toolbar
+- [x] Android/Chrome top-of-page banner using native beforeinstallprompt event with Install CTA
+- [x] Both variants dismissible with 7-day snooze stored in localStorage
+- [x] Wired into Layout — appears on all storefront pages above the header
