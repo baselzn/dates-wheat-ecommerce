@@ -122,19 +122,12 @@ export default function Header({ onCartOpen }: HeaderProps) {
           <div className="flex items-center justify-between h-16 md:h-20">
 
             {/* ── Logo ── */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl gradient-gold flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-                  <span className="text-white text-xl">🌴</span>
-                </div>
-              </div>
-              <div>
-                <div className="font-bold text-[#3E1F00] text-lg leading-tight group-hover:text-[#C9A84C] transition-colors"
-                  style={{ fontFamily: "Playfair Display, serif" }}>
-                  Dates &amp; Wheat
-                </div>
-                <div className="text-[#C9A84C] text-xs leading-tight font-arabic">تمر وقمح</div>
-              </div>
+            <Link href="/" className="flex items-center group">
+              <img
+                src="https://files.manuscdn.com/user_upload_by_module/session_file/109084477/VxBKLAUzuHRIEYQB.webp"
+                alt="Dates & Wheat | تمر وقمح"
+                className="h-12 md:h-14 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              />
             </Link>
 
             {/* ── Desktop Nav ── */}

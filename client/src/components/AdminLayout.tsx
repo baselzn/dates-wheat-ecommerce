@@ -50,11 +50,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo */}
         <div className="p-5 border-b border-white/10">
           <Link href="/admin" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#C9A84C] flex items-center justify-center text-lg">🍯</div>
-            <div>
-              <p className="font-bold text-sm leading-tight">Dates & Wheat</p>
-              <p className="text-[10px] text-[#E8D5A3]/60">Admin Panel</p>
-            </div>
+            <img
+              src="https://files.manuscdn.com/user_upload_by_module/session_file/109084477/lQfRZsUBmPvUTuLR.webp"
+              alt="Dates & Wheat"
+              className="h-10 w-auto object-contain brightness-0 invert"
+            />
+            <p className="text-[10px] text-[#E8D5A3]/60 mt-1">Admin Panel</p>
           </Link>
         </div>
 
