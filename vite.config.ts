@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { VitePWA } from "vite-plugin-pwa";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -150,7 +151,69 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+  VitePWA({
+    registerType: "autoUpdate",
+    includeAssets: ["favicon.ico"],
+    manifest: {
+      name: "Dates & Wheat | تمر وقمح",
+      short_name: "Dates & Wheat",
+      description: "Premium Arabic Sweets, Maamoul & Gift Boxes from Fujairah, UAE",
+      theme_color: "#3E1F00",
+      background_color: "#FFF8F0",
+      display: "standalone",
+      orientation: "portrait",
+      scope: "/",
+      start_url: "/",
+      icons: [
+        {
+          src: "https://files.manuscdn.com/user_upload_by_module/session_file/109084477/lQfRZsUBmPvUTuLR.webp",
+          sizes: "192x192",
+          type: "image/webp",
+          purpose: "any maskable",
+        },
+        {
+          src: "https://files.manuscdn.com/user_upload_by_module/session_file/109084477/lQfRZsUBmPvUTuLR.webp",
+          sizes: "512x512",
+          type: "image/webp",
+          purpose: "any maskable",
+        },
+      ],
+    },
+    workbox: {
+      globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+      runtimeCaching: [
+        {
+          urlPattern: /^\/api\/trpc\//,
+          handler: "NetworkFirst" as const,
+          options: {
+            cacheName: "trpc-cache",
+            expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/files\.manuscdn\.com\//,
+          handler: "CacheFirst" as const,
+          options: {
+            cacheName: "cdn-images",
+            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
+          handler: "StaleWhileRevalidate" as const,
+          options: { cacheName: "google-fonts" },
+        },
+      ],
+    },
+    devOptions: { enabled: false },
+  }),
+];
 
 export default defineConfig({
   plugins,

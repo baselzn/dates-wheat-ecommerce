@@ -30,6 +30,7 @@ import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTracking from "./pages/admin/Tracking";
 import AdminDiscountRules from "./pages/admin/DiscountRules";
 import AdminWooImporter from "./pages/admin/WooImporter";
+import AdminPushNotifications from "./pages/admin/PushNotifications";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/admin/tracking" component={AdminTracking} />
       <Route path="/admin/discount-rules" component={AdminDiscountRules} />
       <Route path="/admin/woo-importer" component={AdminWooImporter} />
+      <Route path="/admin/push-notifications" component={AdminPushNotifications} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />

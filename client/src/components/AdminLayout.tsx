@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  BarChart3, Box, ChevronRight, Home, LayoutDashboard, LogOut,
+  BarChart3, Bell, Box, ChevronRight, Home, LayoutDashboard, LogOut,
   Package, Percent, Radio, Settings, ShoppingCart, Tag, Users, Warehouse
 } from "lucide-react";
 import { useEffect } from "react";
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { label: "Coupons", href: "/admin/coupons", icon: Tag },
   { label: "Discount Rules", href: "/admin/discount-rules", icon: Percent },
   { label: "WooCommerce Import", href: "/admin/woo-importer", icon: Package },
+  { label: "Push Notifications", href: "/admin/push-notifications", icon: Bell },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { label: "Tracking", href: "/admin/tracking", icon: Radio },
   { label: "Settings", href: "/admin/settings", icon: Settings },

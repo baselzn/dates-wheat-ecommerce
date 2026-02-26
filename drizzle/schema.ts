@@ -254,6 +254,7 @@ export const pageViews = mysqlTable("page_views", {
   ip: varchar("ip", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
 // ─── Discount Rules ───────────────────────────────────────────────────────────
 export const discountRules = mysqlTable("discount_rules", {
   id: int("id").autoincrement().primaryKey(),
@@ -282,3 +283,17 @@ export const discountRules = mysqlTable("discount_rules", {
 });
 export type DiscountRule = typeof discountRules.$inferSelect;
 export type InsertDiscountRule = typeof discountRules.$inferInsert;
+
+// ─── Push Notification Subscriptions ─────────────────────────────────────────
+export const pushSubscriptions = mysqlTable("push_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userId: int("userId").references(() => users.id, { onDelete: "set null" }),
+  userAgent: varchar("userAgent", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;

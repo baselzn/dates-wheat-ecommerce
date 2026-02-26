@@ -98,3 +98,11 @@
 - [x] WooCommerce REST API product importer in admin panel (test connection, fetch/import categories, fetch/import products with images, pagination)
 - [x] 33 vitest tests passing (8 new tests for discount rules + WooCommerce importer)
 - [x] Zero TypeScript errors
+
+## Mobile App Experience & PWA
+- [x] Mobile bottom navigation bar (Shop, Categories, Account, Cart) — fixed, safe-area aware
+- [x] PWA web app manifest (name, icons, theme color, display: standalone)
+- [x] Service worker with offline cache strategy (vite-plugin-pwa)
+- [x] Push notification subscription flow (VAPID keys, server endpoint, frontend permission prompt with 5s delay)
+- [x] Server-side push notification sender (web-push library)
+- [x] Admin UI to send push notifications to all subscribers (with quick templates + delivery stats)

@@ -71,6 +71,10 @@ import {
   getDiscountRuleById,
   getDiscountRules,
   upsertDiscountRule,
+  savePushSubscription,
+  deletePushSubscription,
+  getAllPushSubscriptions,
+  getPushSubscriptionCount,
 } from "./db";
 import { storagePut } from "./storage";
 
@@ -1076,7 +1080,74 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Page Views ───────────────────────────────────────────────────────────
+  // ─── P  // ─── Push Notifications ──────────────────────────────────────
+  push: router({
+    subscribe: publicProcedure
+      .input(z.object({
+        endpoint: z.string(),
+        p256dh: z.string(),
+        auth: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await savePushSubscription({
+          ...input,
+          userId: ctx.user?.id ?? null,
+          userAgent: ctx.req.headers["user-agent"] ?? "",
+        });
+        return { success: true };
+      }),
+
+    unsubscribe: publicProcedure
+      .input(z.object({ endpoint: z.string() }))
+      .mutation(async ({ input }) => {
+        await deletePushSubscription(input.endpoint);
+        return { success: true };
+      }),
+
+    count: adminProcedure.query(() => getPushSubscriptionCount()),
+
+    send: adminProcedure
+      .input(z.object({
+        title: z.string(),
+        body: z.string(),
+        url: z.string().optional(),
+        icon: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const webpush = await import("web-push");
+        webpush.setVapidDetails(
+          "mailto:info@datesandwheat.com",
+          process.env.VAPID_PUBLIC_KEY!,
+          process.env.VAPID_PRIVATE_KEY!
+        );
+        const subs = await getAllPushSubscriptions();
+        const payload = JSON.stringify({
+          title: input.title,
+          body: input.body,
+          url: input.url ?? "/",
+          icon: input.icon ?? "https://files.manuscdn.com/user_upload_by_module/session_file/109084477/lQfRZsUBmPvUTuLR.webp",
+        });
+        let sent = 0;
+        let failed = 0;
+        for (const sub of subs) {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            );
+            sent++;
+          } catch (err: any) {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              await deletePushSubscription(sub.endpoint);
+            }
+            failed++;
+          }
+        }
+        return { sent, failed, total: subs.length };
+      }),
+  }),
+
+  // ─── Page Views ─────────────────────────────────────────────
   pageViews: router({
     log: publicProcedure
       .input(z.object({

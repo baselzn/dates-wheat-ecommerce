@@ -13,6 +13,7 @@ import {
   pageViews,
   productVariants,
   products,
+  pushSubscriptions,
   reviews,
   storeSettings,
   trackingPixels,
@@ -876,4 +877,55 @@ export async function applyDiscountRules(params: {
     if (discount > 0) { totalDiscount += discount; appliedRules.push({ id: rule.id, name: rule.name, discount }); }
   }
   return { totalDiscount, appliedRules };
+}
+
+// ── Push Subscriptions ────────────────────────────────────────────────────────
+export async function savePushSubscription(data: {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userId?: number | null;
+  userAgent?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const existing = await db
+    .select()
+    .from(pushSubscriptions)
+    .where(eq(pushSubscriptions.endpoint, data.endpoint))
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .update(pushSubscriptions)
+      .set({ p256dh: data.p256dh, auth: data.auth, userId: data.userId ?? null, userAgent: data.userAgent ?? null })
+      .where(eq(pushSubscriptions.endpoint, data.endpoint));
+    return existing[0];
+  }
+  await db.insert(pushSubscriptions).values({
+    endpoint: data.endpoint,
+    p256dh: data.p256dh,
+    auth: data.auth,
+    userId: data.userId ?? null,
+    userAgent: data.userAgent ?? null,
+  });
+  return { id: 0, ...data };
+}
+
+export async function deletePushSubscription(endpoint: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+}
+
+export async function getAllPushSubscriptions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(pushSubscriptions);
+}
+
+export async function getPushSubscriptionCount() {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ count: sql<number>`count(*)` }).from(pushSubscriptions);
+  return Number(rows[0]?.count ?? 0);
 }
