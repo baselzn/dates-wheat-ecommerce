@@ -80,6 +80,8 @@ import {
   deleteProductImage,
   setFeaturedProductImage,
   reorderProductImages,
+  saveAdminOtp,
+  consumeAdminOtp,
 } from "./db";
 import { storagePut } from "./storage";
 
@@ -229,20 +231,35 @@ export const appRouter = router({
         return { success: true, user: finalUser };
       }),
 
-    // Admin email/password login
+    // Admin login — Step 1: verify credentials, issue OTP
     adminLogin: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string() }))
-      .mutation(async ({ input, ctx }) => {
+      .mutation(async ({ input }) => {
         const user = await getUserByEmail(input.email);
         if (!user || user.role !== "admin") throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         if (!user.passwordHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "No password set" });
         const valid = await bcrypt.compare(input.password, user.passwordHash);
         if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+        // Generate 6-digit OTP and store it
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await saveAdminOtp(user.id, code, expiresAt);
+        console.log(`[Admin 2FA OTP] Email: ${user.email} — Code: ${code}`);
+        return { requiresOtp: true as const, userId: user.id };
+      }),
 
+    // Admin login — Step 2: verify OTP and issue session cookie
+    adminVerifyOtp: publicProcedure
+      .input(z.object({ userId: z.number(), code: z.string().length(6) }))
+      .mutation(async ({ input, ctx }) => {
+        const valid = await consumeAdminOtp(input.userId, input.code);
+        if (!valid) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid or expired OTP. Please try again." });
+        const user = await getUserById(input.userId);
+        if (!user || user.role !== "admin") throw new TRPCError({ code: "UNAUTHORIZED", message: "Not an admin" });
         const token = jwt.sign({ userId: user.id, openId: user.openId, role: user.role }, ENV.cookieSecret, { expiresIn: "7d" });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-        return { success: true, user };
+        return { success: true as const, user };
       }),
 
     updateProfile: protectedProcedure
@@ -833,6 +850,16 @@ export const appRouter = router({
         const order = await getOrderById(input);
         if (!order) return null;
         const items = await getOrderItems(input);
+        return { ...order, items };
+      }),
+      // Lookup by order number string (e.g. "DW-xxx-xxx" or numeric string)
+      byNumber: adminProcedure.input(z.string()).query(async ({ input }) => {
+        // Try numeric ID first, then order number string
+        const numId = Number(input);
+        let order = !isNaN(numId) ? await getOrderById(numId) : null;
+        if (!order) order = await getOrderByNumber(input) ?? null;
+        if (!order) return null;
+        const items = await getOrderItems(order.id);
         return { ...order, items };
       }),
       updateStatus: adminProcedure

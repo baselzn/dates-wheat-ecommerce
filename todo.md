@@ -139,3 +139,13 @@
 - [x] Product detail page: image gallery with thumbnail strip
 - [x] Product detail page: featured image shown first (sorted from DB)
 - [x] 33 tests passing, 0 TypeScript errors
+
+## Admin Login 2FA
+- [ ] Remove Admin tab from public /auth page (keep Login + Sign Up only)
+- [ ] Dedicated /admin login page with email/password step
+- [ ] Admin OTP 2FA: after password check, send 6-digit OTP to admin email
+- [ ] Admin OTP verification step on /admin login page
+- [ ] Server: adminLogin procedure returns {requiresOtp: true} after password check
+- [ ] Server: adminVerifyOtp procedure verifies OTP and issues session cookie
+- [ ] OTP stored in DB with 10-minute expiry
+- [ ] /admin route redirects to /admin/login if not authenticated

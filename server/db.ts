@@ -995,3 +995,24 @@ export async function reorderProductImages(productId: number, orderedIds: number
       .where(and(eq(productImages.id, orderedIds[i]), eq(productImages.productId, productId)));
   }
 }
+
+/// ─── Admin OTP 2FA ────────────────────────────────────────────────────────────
+export async function saveAdminOtp(userId: number, code: string, expiresAt: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const now = Date.now();
+  await db.execute(
+    sql`INSERT INTO admin_otps (userId, code, expiresAt, used, createdAt) VALUES (${userId}, ${code}, ${expiresAt}, 0, ${now})`
+  );
+}
+export async function consumeAdminOtp(userId: number, code: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const now = Date.now();
+  const rows = await db.execute(
+    sql`SELECT id FROM admin_otps WHERE userId = ${userId} AND code = ${code} AND used = 0 AND expiresAt > ${now} ORDER BY createdAt DESC LIMIT 1`
+  ) as unknown as Array<{ id: number }>;
+  if (!rows || rows.length === 0) return false;
+  await db.execute(sql`UPDATE admin_otps SET used = 1 WHERE id = ${rows[0].id}`);
+  return true;
+}

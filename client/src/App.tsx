@@ -31,6 +31,7 @@ import AdminTracking from "./pages/admin/Tracking";
 import AdminDiscountRules from "./pages/admin/DiscountRules";
 import AdminWooImporter from "./pages/admin/WooImporter";
 import AdminPushNotifications from "./pages/admin/PushNotifications";
+import AdminOrderDetail from "./pages/admin/OrderDetail";
 
 function Router() {
   return (
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/orders" component={AdminOrders} />
+      <Route path="/admin/orders/:id" component={AdminOrderDetail} />
       <Route path="/admin/customers" component={AdminCustomers} />
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/coupons" component={AdminCoupons} />

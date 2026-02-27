@@ -9,7 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { sendFirebaseOtp, verifyFirebaseOtp, clearRecaptcha } from "@/lib/firebase";
 import type { ConfirmationResult } from "firebase/auth";
-import { Phone, Shield, ArrowLeft, Smartphone, UserPlus, LogIn } from "lucide-react";
+import { Phone, ArrowLeft, Smartphone, UserPlus, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -202,12 +202,6 @@ export default function Auth() {
   const [signupPhone, setSignupPhone] = useState("");
   const [signupOtpStep, setSignupOtpStep] = useState(false);
 
-  // Admin state
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
-
-  const adminLogin = trpc.auth.adminLogin.useMutation();
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -223,21 +217,6 @@ export default function Auth() {
     if (digits.startsWith("971")) return `+${digits}`;
     if (digits.startsWith("0")) return `+971${digits.slice(1)}`;
     return `+971${digits}`;
-  };
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminLoading(true);
-    try {
-      await adminLogin.mutateAsync({ email: adminEmail, password: adminPassword });
-      await utils.auth.me.invalidate();
-      toast.success("Welcome, Admin!");
-      navigate("/admin");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Invalid credentials");
-    } finally {
-      setAdminLoading(false);
-    }
   };
 
   const handleAuthSuccess = () => navigate("/");
@@ -272,12 +251,6 @@ export default function Auth() {
                   className="flex-1 h-full rounded-none data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#C9A84C] data-[state=active]:text-[#3E1F00] font-medium"
                 >
                   <UserPlus className="h-4 w-4 mr-2" /> Create Account
-                </TabsTrigger>
-                <TabsTrigger
-                  value="admin"
-                  className="flex-1 h-full rounded-none data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#3E1F00] data-[state=active]:text-[#3E1F00] font-medium"
-                >
-                  <Shield className="h-4 w-4 mr-2" /> Admin
                 </TabsTrigger>
               </TabsList>
 
@@ -411,53 +384,7 @@ export default function Auth() {
                   )}
                 </TabsContent>
 
-                {/* ── ADMIN TAB ── */}
-                <TabsContent value="admin" className="mt-0">
-                  <form onSubmit={handleAdminLogin} className="space-y-5">
-                    <div className="text-center mb-2">
-                      <h2 className="text-xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
-                        Admin Access
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1">Sign in with your admin credentials</p>
-                    </div>
-                    <div>
-                      <Label htmlFor="adminEmail" className="text-[#3E1F00] font-medium">Email Address</Label>
-                      <Input
-                        id="adminEmail"
-                        type="email"
-                        value={adminEmail}
-                        onChange={(e) => setAdminEmail(e.target.value)}
-                        placeholder="admin@datesandwheat.com"
-                        required
-                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="adminPassword" className="text-[#3E1F00] font-medium">Password</Label>
-                      <Input
-                        id="adminPassword"
-                        type="password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={adminLoading}
-                      className="w-full bg-[#3E1F00] hover:bg-[#6B3A0F] text-white font-semibold h-11 text-base"
-                    >
-                      {adminLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                          Signing In...
-                        </span>
-                      ) : "Admin Sign In"}
-                    </Button>
-                  </form>
-                </TabsContent>
+
               </div>
             </Tabs>
           </div>

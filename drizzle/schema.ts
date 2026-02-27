@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   decimal,
   int,
@@ -7,6 +8,7 @@ import {
   mysqlTable,
   text,
   timestamp,
+  tinyint,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -314,3 +316,14 @@ export const productImages = mysqlTable("product_images", {
 });
 export type ProductImage = typeof productImages.$inferSelect;
 export type InsertProductImage = typeof productImages.$inferInsert;
+
+// ─── Admin OTPs (2FA for admin login) ────────────────────────────────────────
+export const adminOtps = mysqlTable("admin_otps", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: bigint("expiresAt", { mode: "number" }).notNull(),
+  used: int("used").notNull().default(0),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+});
+export type AdminOtp = typeof adminOtps.$inferSelect;

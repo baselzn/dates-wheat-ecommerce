@@ -57,6 +57,13 @@
       "when": 1772186009453,
       "tag": "0007_majestic_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1772189085922,
+      "tag": "0008_nebulous_the_enforcers",
+      "breakpoints": true
     }
   ]
 }
