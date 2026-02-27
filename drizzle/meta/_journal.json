@@ -50,6 +50,13 @@
       "when": 1772184429353,
       "tag": "0006_eminent_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1772186009453,
+      "tag": "0007_majestic_the_captain",
+      "breakpoints": true
     }
   ]
 }

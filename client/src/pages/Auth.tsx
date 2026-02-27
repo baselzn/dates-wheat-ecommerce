@@ -9,32 +9,205 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { sendFirebaseOtp, verifyFirebaseOtp, clearRecaptcha } from "@/lib/firebase";
 import type { ConfirmationResult } from "firebase/auth";
-import { Phone, Shield, ArrowLeft, Smartphone } from "lucide-react";
+import { Phone, Shield, ArrowLeft, Smartphone, UserPlus, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-export default function Auth() {
+// ─── Shared OTP Step ─────────────────────────────────────────────────────────
+function OTPStep({
+  phone,
+  formatPhone,
+  onBack,
+  onSuccess,
+  name,
+}: {
+  phone: string;
+  formatPhone: (raw: string) => string;
+  onBack: () => void;
+  onSuccess: () => void;
+  name?: string;
+}) {
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(60);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [sent, setSent] = useState(false);
+
+  const firebaseLogin = trpc.auth.firebaseLogin.useMutation();
+  const utils = trpc.useUtils();
   const { track } = usePixelTrack();
+
+  useEffect(() => {
+    // Auto-send OTP when this step mounts
+    sendCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (countdown > 0 && sent) {
+      const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [countdown, sent]);
+
+  const sendCode = async () => {
+    try {
+      const result = await sendFirebaseOtp(formatPhone(phone));
+      setConfirmationResult(result);
+      setSent(true);
+      setCountdown(60);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send OTP";
+      if (msg.includes("invalid-phone-number")) {
+        toast.error("Invalid phone number. Please go back and check.");
+      } else if (msg.includes("too-many-requests")) {
+        toast.error("Too many attempts. Please wait a few minutes.");
+      } else if (msg.includes("billing-not-enabled")) {
+        toast.error("Firebase SMS not enabled — upgrade Firebase to Blaze plan.", { duration: 8000 });
+      } else if (msg.includes("captcha-check-failed") || msg.includes("Hostname match not found")) {
+        toast.error(`Add "${window.location.hostname}" to Firebase Authorized Domains.`, { duration: 10000 });
+      } else {
+        toast.error(msg);
+      }
+      onBack();
+      clearRecaptcha();
+    }
+  };
+
+  const handleVerify = async () => {
+    if (otp.length !== 6 || !confirmationResult) return;
+    setLoading(true);
+    try {
+      const idToken = await verifyFirebaseOtp(confirmationResult, otp);
+      await firebaseLogin.mutateAsync({ idToken, phone: formatPhone(phone), name: name?.trim() || undefined });
+      await utils.auth.me.invalidate();
+      track("CompleteRegistration", { method: "firebase_otp", currency: "AED", value: 0 });
+      toast.success(name ? `Welcome, ${name.split(" ")[0]}! 🍯` : "Welcome back! 🍯");
+      onSuccess();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid OTP";
+      if (msg.includes("invalid-verification-code")) {
+        toast.error("Incorrect code. Please check and try again.");
+      } else if (msg.includes("code-expired")) {
+        toast.error("Code expired. Please request a new one.");
+        onBack();
+        clearRecaptcha();
+      } else {
+        toast.error(msg);
+      }
+      setOtp("");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = () => {
+    setOtp("");
+    setConfirmationResult(null);
+    setSent(false);
+    clearRecaptcha();
+    sendCode();
+  };
+
+  return (
+    <div className="space-y-5">
+      <button
+        onClick={() => { onBack(); clearRecaptcha(); }}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#3E1F00] transition-colors"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> Change number
+      </button>
+
+      <div className="text-center bg-[#F5ECD7] rounded-xl p-4">
+        <Smartphone className="h-8 w-8 text-[#C9A84C] mx-auto mb-2" />
+        <p className="text-sm font-medium text-[#3E1F00]">Code sent to</p>
+        <p className="text-base font-bold text-[#C9A84C] mt-0.5">{formatPhone(phone)}</p>
+        <p className="text-xs text-muted-foreground mt-1">Enter the 6-digit code below</p>
+      </div>
+
+      <div className="flex justify-center">
+        <InputOTP maxLength={6} value={otp} onChange={setOtp} onComplete={handleVerify}>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} />
+            <InputOTPSlot index={1} />
+            <InputOTPSlot index={2} />
+            <InputOTPSlot index={3} />
+            <InputOTPSlot index={4} />
+            <InputOTPSlot index={5} />
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+
+      <Button
+        onClick={handleVerify}
+        disabled={loading || otp.length !== 6}
+        className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
+      >
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+            Verifying...
+          </span>
+        ) : "Verify & Continue"}
+      </Button>
+
+      <div className="text-center">
+        {countdown > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Resend code in <span className="font-semibold text-[#C9A84C]">{countdown}s</span>
+          </p>
+        ) : (
+          <button onClick={handleResend} className="text-sm text-[#C9A84C] hover:underline font-medium">
+            Resend OTP
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Phone Input ─────────────────────────────────────────────────────────────
+function PhoneInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="relative">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+        <span className="text-base">🇦🇪</span>
+        <span className="text-sm text-muted-foreground font-medium">+971</span>
+        <span className="text-muted-foreground/40">|</span>
+      </div>
+      <Input
+        type="tel"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="50 123 4567"
+        className="pl-20 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
+        required
+      />
+    </div>
+  );
+}
+
+// ─── Main Auth Page ───────────────────────────────────────────────────────────
+export default function Auth() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
 
-  // OTP flow state
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  // Login state
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtpStep, setLoginOtpStep] = useState(false);
 
-  // Admin login state
+  // Sign Up state
+  const [signupName, setSignupName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [signupOtpStep, setSignupOtpStep] = useState(false);
+
+  // Admin state
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
 
   const adminLogin = trpc.auth.adminLogin.useMutation();
-  const firebaseLogin = trpc.auth.firebaseLogin.useMutation();
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -42,103 +215,14 @@ export default function Auth() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (countdown > 0) {
-      const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [countdown]);
-
-  // Cleanup reCAPTCHA on unmount
-  useEffect(() => {
     return () => clearRecaptcha();
   }, []);
 
   const formatPhone = (raw: string): string => {
     const digits = raw.replace(/\D/g, "");
-    // If user enters without country code (UAE), prepend +971
     if (digits.startsWith("971")) return `+${digits}`;
     if (digits.startsWith("0")) return `+971${digits.slice(1)}`;
     return `+971${digits}`;
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone.trim()) return;
-    setOtpLoading(true);
-    try {
-      const formattedPhone = formatPhone(phone);
-      const result = await sendFirebaseOtp(formattedPhone);
-      setConfirmationResult(result);
-      setOtpSent(true);
-      setCountdown(60);
-      toast.success("OTP sent!", {
-        description: `A 6-digit code was sent to ${formattedPhone}`,
-      });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to send OTP";
-      // Provide friendly error messages
-      if (msg.includes("invalid-phone-number")) {
-        toast.error("Invalid phone number. Please include country code (e.g. 0501234567).");
-      } else if (msg.includes("too-many-requests")) {
-        toast.error("Too many attempts. Please wait a few minutes and try again.");
-      } else if (msg.includes("billing-not-enabled")) {
-        toast.error("Firebase SMS not enabled", {
-          description: "Upgrade your Firebase project to the Blaze plan at console.firebase.google.com to enable phone authentication.",
-          duration: 8000,
-        });
-      } else if (msg.includes("captcha-check-failed") || msg.includes("Hostname match not found")) {
-        toast.error("Domain not authorized", {
-          description: `Add "${window.location.hostname}" to Firebase Console → Authentication → Settings → Authorized Domains, then try again.`,
-          duration: 10000,
-        });
-      } else {
-        toast.error(msg);
-      }
-      clearRecaptcha();
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6 || !confirmationResult) return;
-    setOtpLoading(true);
-    try {
-      // Step 1: Verify OTP with Firebase and get ID token
-      const idToken = await verifyFirebaseOtp(confirmationResult, otp);
-
-      // Step 2: Exchange Firebase ID token for our app JWT session
-      await firebaseLogin.mutateAsync({ idToken, phone: formatPhone(phone), name: name.trim() || undefined });
-      await utils.auth.me.invalidate();
-
-      track("CompleteRegistration", { method: "firebase_otp", currency: "AED", value: 0 });
-      toast.success("Welcome to Dates & Wheat! 🍯");
-      navigate("/");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid OTP";
-      if (msg.includes("invalid-verification-code")) {
-        toast.error("Incorrect code. Please check and try again.");
-      } else if (msg.includes("code-expired")) {
-        toast.error("Code expired. Please request a new OTP.");
-        setOtpSent(false);
-        setOtp("");
-        clearRecaptcha();
-      } else {
-        toast.error(msg);
-      }
-      setOtp("");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setOtpSent(false);
-    setOtp("");
-    setConfirmationResult(null);
-    // Pass isResend=true so the reCAPTCHA container is fully reset before next send
-    // The actual re-send happens when the user submits the phone form again
-    clearRecaptcha();
   };
 
   const handleAdminLogin = async (e: React.FormEvent) => {
@@ -150,254 +234,239 @@ export default function Auth() {
       toast.success("Welcome, Admin!");
       navigate("/admin");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid credentials";
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setAdminLoading(false);
     }
   };
 
+  const handleAuthSuccess = () => navigate("/");
+
   return (
     <Layout>
-      {/* reCAPTCHA container is appended to <body> by firebase.ts — no in-page div needed */}
-
-      <div className="min-h-[70vh] flex items-center justify-center py-12 px-4">
+      {/* reCAPTCHA appended to <body> by firebase.ts */}
+      <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 bg-gradient-to-b from-[#FFF8E7] to-white">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3">🍯</div>
-            <h1
-              className="text-2xl font-bold text-[#3E1F00]"
-              style={{ fontFamily: "Playfair Display, serif" }}
-            >
-              Welcome to Dates & Wheat
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Sign in or create an account to continue
-            </p>
+            <img
+              src="https://cdn-static.manus.im/webdev-static-assets/Main-Logo-horizontally-1.webp"
+              alt="Dates & Wheat"
+              className="h-14 mx-auto mb-4 object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <p className="text-muted-foreground text-sm">Premium Arabic Confectionery</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#E8D5A3] p-6 shadow-sm">
-            <Tabs defaultValue="customer">
-              <TabsList className="w-full mb-6 bg-[#F5ECD7]">
+          <div className="bg-white rounded-2xl border border-[#E8D5A3] shadow-sm overflow-hidden">
+            <Tabs defaultValue="login">
+              <TabsList className="w-full rounded-none border-b border-[#E8D5A3] bg-[#FFF8E7] h-12 p-0">
                 <TabsTrigger
-                  value="customer"
-                  className="flex-1 data-[state=active]:bg-[#C9A84C] data-[state=active]:text-white"
+                  value="login"
+                  className="flex-1 h-full rounded-none data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#C9A84C] data-[state=active]:text-[#3E1F00] font-medium"
                 >
-                  <Phone className="h-4 w-4 mr-2" /> Customer
+                  <LogIn className="h-4 w-4 mr-2" /> Sign In
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="flex-1 h-full rounded-none data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#C9A84C] data-[state=active]:text-[#3E1F00] font-medium"
+                >
+                  <UserPlus className="h-4 w-4 mr-2" /> Create Account
                 </TabsTrigger>
                 <TabsTrigger
                   value="admin"
-                  className="flex-1 data-[state=active]:bg-[#3E1F00] data-[state=active]:text-white"
+                  className="flex-1 h-full rounded-none data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#3E1F00] data-[state=active]:text-[#3E1F00] font-medium"
                 >
                   <Shield className="h-4 w-4 mr-2" /> Admin
                 </TabsTrigger>
               </TabsList>
 
-              {/* ── Customer: Firebase Phone OTP ── */}
-              <TabsContent value="customer">
-                {!otpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-5">
-                    {/* Name input */}
-                    <div>
-                      <Label htmlFor="authName" className="text-[#3E1F00] font-medium">
-                        Full Name <span className="text-muted-foreground font-normal">(new customers)</span>
-                      </Label>
-                      <Input
-                        id="authName"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Your full name"
-                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
-                      />
-                    </div>
-                    {/* Phone input */}
-                    <div>
-                      <Label htmlFor="phone" className="text-[#3E1F00] font-medium">
-                        Phone Number
-                      </Label>
-                      <div className="relative mt-1.5">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-                          <span className="text-base">🇦🇪</span>
-                          <span className="text-sm text-muted-foreground font-medium">+971</span>
-                          <span className="text-muted-foreground/40">|</span>
+              <div className="p-6">
+                {/* ── LOGIN TAB ── */}
+                <TabsContent value="login" className="mt-0">
+                  {!loginOtpStep ? (
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); if (loginPhone.trim()) setLoginOtpStep(true); }}
+                      className="space-y-5"
+                    >
+                      <div className="text-center mb-2">
+                        <h2 className="text-xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
+                          Welcome Back
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1">Enter your phone number to sign in</p>
+                      </div>
+                      <div>
+                        <Label className="text-[#3E1F00] font-medium">Phone Number</Label>
+                        <div className="mt-1.5">
+                          <PhoneInput value={loginPhone} onChange={setLoginPhone} />
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                          <Smartphone className="h-3 w-3" />
+                          We'll send a 6-digit verification code via SMS
+                        </p>
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={!loginPhone.trim()}
+                        className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
+                      >
+                        Send Verification Code
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Don't have an account?{" "}
+                        <button
+                          type="button"
+                          className="text-[#C9A84C] hover:underline font-medium"
+                          onClick={() => {
+                            const tab = document.querySelector('[data-value="signup"]') as HTMLElement;
+                            tab?.click();
+                          }}
+                        >
+                          Create one
+                        </button>
+                      </p>
+                    </form>
+                  ) : (
+                    <OTPStep
+                      phone={loginPhone}
+                      formatPhone={formatPhone}
+                      onBack={() => setLoginOtpStep(false)}
+                      onSuccess={handleAuthSuccess}
+                    />
+                  )}
+                </TabsContent>
+
+                {/* ── SIGN UP TAB ── */}
+                <TabsContent value="signup" className="mt-0">
+                  {!signupOtpStep ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!signupName.trim()) { toast.error("Please enter your full name."); return; }
+                        if (!signupPhone.trim()) { toast.error("Please enter your phone number."); return; }
+                        setSignupOtpStep(true);
+                      }}
+                      className="space-y-5"
+                    >
+                      <div className="text-center mb-2">
+                        <h2 className="text-xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
+                          Create Account
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1">Join us for exclusive offers and easy reordering</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="signupName" className="text-[#3E1F00] font-medium">
+                          Full Name <span className="text-red-500">*</span>
+                        </Label>
                         <Input
-                          id="phone"
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="50 123 4567"
-                          className="pl-20 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
+                          id="signupName"
+                          type="text"
+                          value={signupName}
+                          onChange={(e) => setSignupName(e.target.value)}
+                          placeholder="Your full name"
+                          className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
                           required
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-                        <Smartphone className="h-3 w-3" />
-                        We'll send a 6-digit verification code via SMS
+                      <div>
+                        <Label className="text-[#3E1F00] font-medium">
+                          Phone Number <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="mt-1.5">
+                          <PhoneInput value={signupPhone} onChange={setSignupPhone} />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                          <Smartphone className="h-3 w-3" />
+                          We'll send a 6-digit verification code via SMS
+                        </p>
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
+                      >
+                        Send Verification Code
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          className="text-[#C9A84C] hover:underline font-medium"
+                          onClick={() => {
+                            const tab = document.querySelector('[data-value="login"]') as HTMLElement;
+                            tab?.click();
+                          }}
+                        >
+                          Sign in
+                        </button>
                       </p>
-                    </div>
+                    </form>
+                  ) : (
+                    <OTPStep
+                      phone={signupPhone}
+                      formatPhone={formatPhone}
+                      name={signupName}
+                      onBack={() => setSignupOtpStep(false)}
+                      onSuccess={handleAuthSuccess}
+                    />
+                  )}
+                </TabsContent>
 
+                {/* ── ADMIN TAB ── */}
+                <TabsContent value="admin" className="mt-0">
+                  <form onSubmit={handleAdminLogin} className="space-y-5">
+                    <div className="text-center mb-2">
+                      <h2 className="text-xl font-bold text-[#3E1F00]" style={{ fontFamily: "Playfair Display, serif" }}>
+                        Admin Access
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">Sign in with your admin credentials</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="adminEmail" className="text-[#3E1F00] font-medium">Email Address</Label>
+                      <Input
+                        id="adminEmail"
+                        type="email"
+                        value={adminEmail}
+                        onChange={(e) => setAdminEmail(e.target.value)}
+                        placeholder="admin@datesandwheat.com"
+                        required
+                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="adminPassword" className="text-[#3E1F00] font-medium">Password</Label>
+                      <Input
+                        id="adminPassword"
+                        type="password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
+                      />
+                    </div>
                     <Button
                       type="submit"
-                      disabled={otpLoading || !phone.trim()}
-                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
+                      disabled={adminLoading}
+                      className="w-full bg-[#3E1F00] hover:bg-[#6B3A0F] text-white font-semibold h-11 text-base"
                     >
-                      {otpLoading ? (
+                      {adminLoading ? (
                         <span className="flex items-center gap-2">
                           <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                          Sending OTP...
+                          Signing In...
                         </span>
-                      ) : (
-                        "Send Verification Code"
-                      )}
+                      ) : "Admin Sign In"}
                     </Button>
-
-                    {/* Powered by Firebase badge */}
-                    <p className="text-center text-xs text-muted-foreground">
-                      Secured by{" "}
-                      <span className="font-semibold text-[#F57C00]">Firebase</span> &amp; Google reCAPTCHA
-                    </p>
                   </form>
-                ) : (
-                  <div className="space-y-5">
-                    {/* Back button */}
-                    <button
-                      onClick={handleResend}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-[#3E1F00] transition-colors"
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                      Change number
-                    </button>
-
-                    {/* Instruction */}
-                    <div className="text-center bg-[#F5ECD7] rounded-xl p-4">
-                      <Smartphone className="h-8 w-8 text-[#C9A84C] mx-auto mb-2" />
-                      <p className="text-sm font-medium text-[#3E1F00]">
-                        Code sent to
-                      </p>
-                      <p className="text-base font-bold text-[#C9A84C] mt-0.5">
-                        {formatPhone(phone)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Enter the 6-digit code below
-                      </p>
-                    </div>
-
-                    {/* OTP input */}
-                    <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={otp}
-                        onChange={setOtp}
-                        onComplete={handleVerifyOtp}
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot index={0} />
-                          <InputOTPSlot index={1} />
-                          <InputOTPSlot index={2} />
-                          <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </div>
-
-                    <Button
-                      onClick={handleVerifyOtp}
-                      disabled={otpLoading || otp.length !== 6}
-                      className="w-full bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-11 text-base"
-                    >
-                      {otpLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                          Verifying...
-                        </span>
-                      ) : (
-                        "Verify & Sign In"
-                      )}
-                    </Button>
-
-                    {/* Resend */}
-                    <div className="text-center">
-                      {countdown > 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          Resend code in{" "}
-                          <span className="font-semibold text-[#C9A84C]">{countdown}s</span>
-                        </p>
-                      ) : (
-                        <button
-                          onClick={handleResend}
-                          className="text-sm text-[#C9A84C] hover:underline font-medium"
-                        >
-                          Resend OTP
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* ── Admin: Email + Password ── */}
-              <TabsContent value="admin">
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  <div>
-                    <Label htmlFor="adminEmail" className="text-[#3E1F00] font-medium">
-                      Email Address
-                    </Label>
-                    <Input
-                      id="adminEmail"
-                      type="email"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="admin@datesandwheat.com"
-                      required
-                      className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="adminPassword" className="text-[#3E1F00] font-medium">
-                      Password
-                    </Label>
-                    <Input
-                      id="adminPassword"
-                      type="password"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={adminLoading}
-                    className="w-full bg-[#3E1F00] hover:bg-[#6B3A0F] text-white font-semibold h-11 text-base"
-                  >
-                    {adminLoading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Signing In...
-                      </span>
-                    ) : (
-                      "Admin Sign In"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+                </TabsContent>
+              </div>
             </Tabs>
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-4">
             By continuing, you agree to our{" "}
-            <a href="/terms" className="text-[#C9A84C] hover:underline">
-              Terms
-            </a>{" "}
+            <a href="/terms" className="text-[#C9A84C] hover:underline">Terms</a>{" "}
             and{" "}
-            <a href="/privacy" className="text-[#C9A84C] hover:underline">
-              Privacy Policy
-            </a>
+            <a href="/privacy" className="text-[#C9A84C] hover:underline">Privacy Policy</a>
           </p>
         </div>
       </div>

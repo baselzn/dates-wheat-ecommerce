@@ -127,3 +127,15 @@
 - [x] Address saved to DB with lat/lng + mapAddress after order
 - [x] Address label selector (Home / Work / Other)
 - [x] 33 tests passing, 0 TypeScript errors
+
+## Auth Page Tabs & Multi-Image Products
+- [x] Auth page: separate Login tab (phone + OTP only)
+- [x] Auth page: separate Sign Up tab (name + phone + OTP)
+- [x] Auth page: Admin tab remains (email + password)
+- [x] Product images table in DB (productId, url, sortOrder, isFeatured)
+- [x] Admin product form: multi-image upload with drag-to-reorder
+- [x] Admin product form: click to set featured/main image (star button)
+- [x] Admin product form: delete individual images
+- [x] Product detail page: image gallery with thumbnail strip
+- [x] Product detail page: featured image shown first (sorted from DB)
+- [x] 33 tests passing, 0 TypeScript errors

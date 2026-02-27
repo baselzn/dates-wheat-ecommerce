@@ -13,6 +13,7 @@ import {
   pageViews,
   productVariants,
   products,
+  productImages,
   pushSubscriptions,
   reviews,
   storeSettings,
@@ -931,4 +932,66 @@ export async function getPushSubscriptionCount() {
   if (!db) return 0;
   const rows = await db.select({ count: sql<number>`count(*)` }).from(pushSubscriptions);
   return Number(rows[0]?.count ?? 0);
+}
+
+// ─── Product Images ───────────────────────────────────────────────────────────
+export async function getProductImages(productId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(productImages)
+    .where(eq(productImages.productId, productId))
+    .orderBy(productImages.sortOrder);
+}
+
+export async function addProductImage(data: {
+  productId: number;
+  url: string;
+  fileKey?: string;
+  altText?: string;
+  sortOrder?: number;
+  isFeatured?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  // If this is the first image, auto-set as featured
+  if (data.isFeatured === undefined) {
+    const existing = await getProductImages(data.productId);
+    data.isFeatured = existing.length === 0;
+  }
+  await db.insert(productImages).values(data);
+  const [[{ lid }]] = await db.execute("SELECT LAST_INSERT_ID() as lid") as unknown as [[{ lid: number }]];
+  return Number(lid);
+}
+
+export async function deleteProductImage(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.delete(productImages).where(eq(productImages.id, id));
+}
+
+export async function setFeaturedProductImage(productId: number, imageId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  // Clear all featured flags for this product, then set the chosen one
+  await db
+    .update(productImages)
+    .set({ isFeatured: false })
+    .where(eq(productImages.productId, productId));
+  await db
+    .update(productImages)
+    .set({ isFeatured: true })
+    .where(and(eq(productImages.id, imageId), eq(productImages.productId, productId)));
+}
+
+export async function reorderProductImages(productId: number, orderedIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  for (let i = 0; i < orderedIds.length; i++) {
+    await db
+      .update(productImages)
+      .set({ sortOrder: i })
+      .where(and(eq(productImages.id, orderedIds[i]), eq(productImages.productId, productId)));
+  }
 }

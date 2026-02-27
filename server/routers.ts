@@ -75,6 +75,11 @@ import {
   deletePushSubscription,
   getAllPushSubscriptions,
   getPushSubscriptionCount,
+  getProductImages,
+  addProductImage,
+  deleteProductImage,
+  setFeaturedProductImage,
+  reorderProductImages,
 } from "./db";
 import { storagePut } from "./storage";
 
@@ -778,16 +783,47 @@ export const appRouter = router({
           });
           return { id: productId };
         }),
-      delete: adminProcedure.input(z.number()).mutation(({ input }) => deleteProduct(input)),
-      uploadImage: adminProcedure
-        .input(z.object({ base64: z.string(), filename: z.string(), mimeType: z.string() }))
-        .mutation(async ({ input }) => {
-          const buffer = Buffer.from(input.base64, 'base64');
-          const key = `products/${nanoid()}-${input.filename}`;
-          const { url } = await storagePut(key, buffer, input.mimeType);
-          return { url };
-        }),
-    }),
+    delete: adminProcedure.input(z.number()).mutation(({ input }) => deleteProduct(input)),
+    uploadImage: adminProcedure
+      .input(z.object({ base64: z.string(), filename: z.string(), mimeType: z.string() }))
+      .mutation(async ({ input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const key = `products/${nanoid()}-${input.filename}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        return { url };
+      }),
+    // ── Multi-image gallery procedures ──
+    getImages: publicProcedure.input(z.number()).query(({ input }) => getProductImages(input)),
+    addImage: adminProcedure
+      .input(z.object({
+        productId: z.number(),
+        base64: z.string(),
+        filename: z.string(),
+        mimeType: z.string(),
+        altText: z.string().optional(),
+        isFeatured: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const key = `products/${nanoid()}-${input.filename}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        const id = await addProductImage({
+          productId: input.productId,
+          url,
+          fileKey: key,
+          altText: input.altText,
+          isFeatured: input.isFeatured,
+        });
+        return { id, url };
+      }),
+    deleteImage: adminProcedure.input(z.number()).mutation(({ input }) => deleteProductImage(input)),
+    setFeaturedImage: adminProcedure
+      .input(z.object({ productId: z.number(), imageId: z.number() }))
+      .mutation(({ input }) => setFeaturedProductImage(input.productId, input.imageId)),
+    reorderImages: adminProcedure
+      .input(z.object({ productId: z.number(), orderedIds: z.array(z.number()) }))
+      .mutation(({ input }) => reorderProductImages(input.productId, input.orderedIds)),
+  }),
 
     orders: router({
       list: adminProcedure

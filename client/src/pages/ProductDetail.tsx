@@ -15,6 +15,10 @@ import { toast } from "sonner";
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { data: product, isLoading } = trpc.products.bySlug.useQuery(slug || "");
+  const { data: galleryImages } = trpc.admin.products.getImages.useQuery(
+    product?.id ?? 0,
+    { enabled: !!product?.id }
+  );
   const { data: related } = trpc.products.list.useQuery(
     { categoryId: product?.categoryId, limit: 4 },
     { enabled: !!product?.categoryId }
@@ -51,7 +55,15 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.images || [];
+  // Use gallery images from DB if available, otherwise fall back to product.images array
+  const dbImages = galleryImages && galleryImages.length > 0
+    ? [
+        // Put featured image first
+        ...galleryImages.filter(g => g.isFeatured).map(g => g.url),
+        ...galleryImages.filter(g => !g.isFeatured).map(g => g.url),
+      ]
+    : null;
+  const images: string[] = dbImages ?? (product.images as string[] | null) ?? [];
   const selectedVariant = product.variants?.find((v) => v.id === selectedVariantId);
   const price = selectedVariant ? Number(selectedVariant.price) : Number(product.basePrice);
   const comparePrice = selectedVariant?.comparePrice

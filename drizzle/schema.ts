@@ -300,3 +300,17 @@ export const pushSubscriptions = mysqlTable("push_subscriptions", {
 });
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+// ─── Product Images ───────────────────────────────────────────────────────────
+export const productImages = mysqlTable("product_images", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }),
+  altText: varchar("altText", { length: 256 }),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isFeatured: boolean("isFeatured").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProductImage = typeof productImages.$inferSelect;
+export type InsertProductImage = typeof productImages.$inferInsert;

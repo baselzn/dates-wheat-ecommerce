@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
-import { Edit, Plus, Search, Trash2, Upload } from "lucide-react";
+import { Edit, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,15 +18,15 @@ type ProductForm = {
   categoryId: string; basePrice: string; comparePrice: string;
   stockQty: string; isGlutenFree: boolean; isSugarFree: boolean;
   isVegan: boolean; isActive: boolean; isFeatured: boolean;
-  images: string;
 };
 
 const EMPTY_FORM: ProductForm = {
   nameEn: "", nameAr: "", slug: "", descriptionEn: "", descriptionAr: "",
   categoryId: "", basePrice: "", comparePrice: "", stockQty: "100",
   isGlutenFree: false, isSugarFree: false, isVegan: false, isActive: true, isFeatured: false,
-  images: "",
 };
+
+type GalleryImage = { id: number; url: string; isFeatured: boolean; altText?: string | null };
 
 export default function AdminProducts() {
   const [search, setSearch] = useState("");
@@ -34,14 +34,25 @@ export default function AdminProducts() {
   const [editProduct, setEditProduct] = useState<ProductForm & { id?: number }>(EMPTY_FORM);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [gallery, setGallery] = useState<GalleryImage[]>([]);
 
   const { data, isLoading, refetch } = trpc.admin.products.list.useQuery({ search, page, limit: 20 });
   const { data: categories } = trpc.categories.list.useQuery();
   const upsertProduct = trpc.admin.products.upsert.useMutation();
   const deleteProduct = trpc.admin.products.delete.useMutation();
-  const uploadImage = trpc.admin.products.uploadImage.useMutation();
+  const addImage = trpc.admin.products.addImage.useMutation();
+  const deleteImage = trpc.admin.products.deleteImage.useMutation();
+  const setFeaturedImage = trpc.admin.products.setFeaturedImage.useMutation();
 
-  const handleOpen = (product?: Record<string, unknown> & { id?: number; nameEn?: string; nameAr?: string; slug?: string; descriptionEn?: string; descriptionAr?: string; categoryId?: number; basePrice?: string | number; comparePrice?: string | number | null; stockQty?: number; isGlutenFree?: boolean; isSugarFree?: boolean; isVegan?: boolean; isActive?: boolean; isFeatured?: boolean; images?: string[]; categoryName?: string }) => {
+  const utils = trpc.useUtils();
+
+  const handleOpen = async (product?: Record<string, unknown> & {
+    id?: number; nameEn?: string; nameAr?: string; slug?: string;
+    descriptionEn?: string; descriptionAr?: string; categoryId?: number;
+    basePrice?: string | number; comparePrice?: string | number | null;
+    stockQty?: number; isGlutenFree?: boolean; isSugarFree?: boolean;
+    isVegan?: boolean; isActive?: boolean; isFeatured?: boolean;
+  }) => {
     if (product) {
       setEditProduct({
         id: product.id,
@@ -59,10 +70,17 @@ export default function AdminProducts() {
         isVegan: product.isVegan || false,
         isActive: product.isActive !== false,
         isFeatured: product.isFeatured || false,
-        images: (product.images || []).join("\n"),
       });
+      // Load existing gallery images
+      if (product.id) {
+        const imgs = await utils.client.admin.products.getImages.query(product.id as number);
+        setGallery(imgs as GalleryImage[]);
+      } else {
+        setGallery([]);
+      }
     } else {
       setEditProduct(EMPTY_FORM);
+      setGallery([]);
     }
     setDialogOpen(true);
   };
@@ -74,6 +92,14 @@ export default function AdminProducts() {
     }
     try {
       const slug = editProduct.slug || editProduct.nameEn.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      // Sync featured image URL to the product's main images field
+      const featuredImg = gallery.find(g => g.isFeatured);
+      const imageUrls = gallery.map(g => g.url);
+      if (featuredImg) {
+        // Move featured to front
+        const sorted = [featuredImg.url, ...imageUrls.filter(u => u !== featuredImg.url)];
+        imageUrls.splice(0, imageUrls.length, ...sorted);
+      }
       await upsertProduct.mutateAsync({
         id: editProduct.id,
         nameEn: editProduct.nameEn,
@@ -90,7 +116,7 @@ export default function AdminProducts() {
         isVegan: editProduct.isVegan,
         isActive: editProduct.isActive,
         isFeatured: editProduct.isFeatured,
-        images: editProduct.images ? editProduct.images.split("\n").filter(Boolean) : [],
+        images: imageUrls,
       });
       toast.success(editProduct.id ? "Product updated!" : "Product created!");
       setDialogOpen(false);
@@ -113,25 +139,79 @@ export default function AdminProducts() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(",")[1];
-        const result = await uploadImage.mutateAsync({ base64, filename: file.name, mimeType: file.type });
-        setEditProduct(prev => ({
-          ...prev,
-          images: prev.images ? `${prev.images}\n${result.url}` : result.url,
-        }));
-        toast.success("Image uploaded!");
-      };
-      reader.readAsDataURL(file);
+      for (const file of files) {
+        const reader = new FileReader();
+        await new Promise<void>((resolve, reject) => {
+          reader.onload = async () => {
+            try {
+              const base64 = (reader.result as string).split(",")[1];
+              const isFirst = gallery.length === 0;
+              if (editProduct.id) {
+                // Product already saved — persist to product_images table
+                const result = await addImage.mutateAsync({
+                  productId: editProduct.id,
+                  base64,
+                  filename: file.name,
+                  mimeType: file.type,
+                  isFeatured: isFirst,
+                });
+                setGallery(prev => [...prev, { id: result.id, url: result.url, isFeatured: isFirst }]);
+              } else {
+                // New product — stage locally until saved
+                const tempId = Date.now() + Math.random();
+                // Upload to S3 via uploadImage (no productId needed yet)
+                const resp = await utils.client.admin.products.uploadImage.mutate({ base64, filename: file.name, mimeType: file.type });
+                setGallery(prev => [...prev, { id: tempId, url: resp.url, isFeatured: isFirst && prev.length === 0 }]);
+              }
+              resolve();
+            } catch (err) { reject(err); }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      toast.success(`${files.length} image${files.length > 1 ? "s" : ""} uploaded`);
     } catch {
       toast.error("Failed to upload image");
     } finally {
       setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteImage = async (img: GalleryImage) => {
+    if (editProduct.id && img.id > 1000000) {
+      // Temp staged image — just remove from local state
+      setGallery(prev => prev.filter(g => g.id !== img.id));
+      return;
+    }
+    try {
+      if (editProduct.id) await deleteImage.mutateAsync(img.id);
+      const newGallery = gallery.filter(g => g.id !== img.id);
+      // If we deleted the featured, promote the first remaining
+      if (img.isFeatured && newGallery.length > 0) {
+        newGallery[0].isFeatured = true;
+        if (editProduct.id) await setFeaturedImage.mutateAsync({ productId: editProduct.id, imageId: newGallery[0].id });
+      }
+      setGallery(newGallery);
+    } catch {
+      toast.error("Failed to delete image");
+    }
+  };
+
+  const handleSetFeatured = async (img: GalleryImage) => {
+    const updated = gallery.map(g => ({ ...g, isFeatured: g.id === img.id }));
+    setGallery(updated);
+    if (editProduct.id) {
+      try {
+        await setFeaturedImage.mutateAsync({ productId: editProduct.id, imageId: img.id });
+        toast.success("Featured image updated");
+      } catch {
+        toast.error("Failed to set featured image");
+      }
     }
   };
 
@@ -193,7 +273,7 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{product.categoryName || "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{(product as unknown as Record<string, unknown>).categoryName as string || "—"}</td>
                     <td className="px-4 py-3 text-right font-medium text-[#3E1F00]">
                       AED {Number(product.basePrice).toFixed(2)}
                       {product.comparePrice && (
@@ -283,40 +363,74 @@ export default function AdminProducts() {
                 <Textarea value={editProduct.descriptionAr} onChange={(e) => setEditProduct(p => ({ ...p, descriptionAr: e.target.value }))} className="mt-1 border-[#E8D5A3]" rows={2} dir="rtl" />
               </div>
 
-              {/* Image upload */}
+              {/* ── Multi-Image Gallery ── */}
               <div className="col-span-2">
-                <Label>Images</Label>
-                <div className="mt-1 flex gap-2">
-                  <Textarea
-                    value={editProduct.images}
-                    onChange={(e) => setEditProduct(p => ({ ...p, images: e.target.value }))}
-                    className="border-[#E8D5A3] text-xs"
-                    rows={2}
-                    placeholder="One image URL per line"
-                  />
-                  <div>
-                    <label className="cursor-pointer">
-                      <div className="flex flex-col items-center justify-center w-20 h-20 border-2 border-dashed border-[#C9A84C] rounded-lg hover:bg-[#F5ECD7] transition-colors">
-                        {uploading ? (
-                          <div className="animate-spin w-5 h-5 border-2 border-[#C9A84C] border-t-transparent rounded-full" />
-                        ) : (
-                          <>
-                            <Upload className="h-5 w-5 text-[#C9A84C]" />
-                            <span className="text-xs text-[#C9A84C] mt-1">Upload</span>
-                          </>
-                        )}
-                      </div>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    </label>
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>Product Images</Label>
+                  <span className="text-xs text-muted-foreground">Click ★ to set featured image</span>
                 </div>
+
+                {/* Gallery grid */}
+                {gallery.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {gallery.map((img) => (
+                      <div key={img.id} className="relative group rounded-lg overflow-hidden border-2 aspect-square"
+                        style={{ borderColor: img.isFeatured ? "#C9A84C" : "#E8D5A3" }}>
+                        <img src={img.url} alt={img.altText || "product"} className="w-full h-full object-cover" />
+                        {/* Featured badge */}
+                        {img.isFeatured && (
+                          <div className="absolute top-1 left-1 bg-[#C9A84C] text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                            <Star className="h-2.5 w-2.5 fill-white" /> Featured
+                          </div>
+                        )}
+                        {/* Hover actions */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                          {!img.isFeatured && (
+                            <button
+                              onClick={() => handleSetFeatured(img)}
+                              className="bg-[#C9A84C] text-white rounded-full p-1 hover:bg-[#9A7A2E] transition-colors"
+                              title="Set as featured"
+                            >
+                              <Star className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteImage(img)}
+                            className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                            title="Delete image"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <label className="cursor-pointer block">
+                  <div className="flex items-center justify-center gap-2 w-full h-14 border-2 border-dashed border-[#C9A84C] rounded-lg hover:bg-[#F5ECD7] transition-colors">
+                    {uploading ? (
+                      <div className="animate-spin w-5 h-5 border-2 border-[#C9A84C] border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 text-[#C9A84C]" />
+                        <span className="text-sm text-[#C9A84C] font-medium">
+                          {gallery.length === 0 ? "Upload images" : "Add more images"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">(multiple allowed)</span>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+                </label>
               </div>
 
               {/* Toggles */}
               <div className="col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { key: "isActive", label: "Active" },
-                  { key: "isFeatured", label: "Featured" },
+                  { key: "isFeatured", label: "Featured Product" },
                   { key: "isGlutenFree", label: "Gluten Free" },
                   { key: "isSugarFree", label: "Sugar Free" },
                   { key: "isVegan", label: "Vegan" },
