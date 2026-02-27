@@ -603,6 +603,9 @@ export async function upsertAddress(data: {
   city: string;
   emirate: string;
   isDefault?: boolean;
+  latitude?: string;
+  longitude?: string;
+  mapAddress?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");

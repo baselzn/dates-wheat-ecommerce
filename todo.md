@@ -113,3 +113,17 @@
 - [x] Android/Chrome top-of-page banner using native beforeinstallprompt event with Install CTA
 - [x] Both variants dismissible with 7-day snooze stored in localStorage
 - [x] Wired into Layout — appears on all storefront pages above the header
+
+## OTP Auth & Smart Checkout Address
+- [x] OTP signup modal: name + phone → send OTP → verify → auto-create account
+- [x] OTP login modal: phone → send OTP → verify (returning user, passwordless)
+- [x] Unified OTPAuthModal component (signup vs login mode, reusable)
+- [x] Update sendOtp / verifyOtp + firebaseLogin server procedures to accept name for new users
+- [x] Checkout: auth step with Sign In / Create Account / Continue as Guest options
+- [x] Checkout shipping step: returning user login prompt with OTP CTA
+- [x] Checkout address step: GPS "Use my location" button (Geolocation API + reverse geocode)
+- [x] Checkout address step: Google Map picker (click to pin, auto-fills address fields)
+- [x] Checkout address step: saved addresses list for logged-in returning users with label + default badge
+- [x] Address saved to DB with lat/lng + mapAddress after order
+- [x] Address label selector (Home / Work / Other)
+- [x] 33 tests passing, 0 TypeScript errors

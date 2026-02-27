@@ -52,6 +52,9 @@ export const addresses = mysqlTable("addresses", {
   emirate: varchar("emirate", { length: 64 }).notNull(),
   country: varchar("country", { length: 64 }).default("UAE").notNull(),
   isDefault: boolean("isDefault").default(false).notNull(),
+  latitude: varchar("latitude", { length: 32 }),
+  longitude: varchar("longitude", { length: 32 }),
+  mapAddress: text("mapAddress"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

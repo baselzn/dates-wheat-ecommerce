@@ -155,20 +155,23 @@ export const appRouter = router({
         return { success: true, code: process.env.NODE_ENV === "development" ? code : undefined };
       }),
 
-    verifyOtp: publicProcedure
-      .input(z.object({ phone: z.string(), code: z.string() }))
+     verifyOtp: publicProcedure
+      .input(z.object({ phone: z.string(), code: z.string(), name: z.string().optional() }))
       .mutation(async ({ input, ctx }) => {
         const valid = await verifyOtp(input.phone, input.code);
         if (!valid) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired OTP" });
-
         let user = await getUserByPhone(input.phone);
         if (!user) {
+          // New user — create account with name
           const openId = `phone_${input.phone.replace(/\D/g, "")}`;
-          await upsertUser({ openId, phone: input.phone, loginMethod: "otp" });
+          await upsertUser({ openId, phone: input.phone, name: input.name ?? null, loginMethod: "otp" });
+          user = await getUserByPhone(input.phone);
+        } else if (input.name && !user.name) {
+          // Existing user without a name — update it
+          await upsertUser({ openId: user.openId, name: input.name });
           user = await getUserByPhone(input.phone);
         }
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
         const token = jwt.sign({ userId: user.id, openId: user.openId, role: user.role }, ENV.cookieSecret, { expiresIn: "30d" });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
@@ -180,6 +183,7 @@ export const appRouter = router({
       .input(z.object({
         idToken: z.string(),
         phone: z.string(),
+        name: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         // Verify the Firebase ID token server-side
@@ -199,6 +203,7 @@ export const appRouter = router({
         await upsertUser({
           openId,
           phone: phoneFromToken,
+          name: input.name ?? null,
           loginMethod: "firebase_otp",
           lastSignedIn: new Date(),
         });
@@ -541,6 +546,9 @@ export const appRouter = router({
         city: z.string(),
         emirate: z.string(),
         isDefault: z.boolean().optional(),
+        latitude: z.string().optional(),
+        longitude: z.string().optional(),
+        mapAddress: z.string().optional(),
       }))
       .mutation(({ input, ctx }) => upsertAddress({ ...input, userId: ctx.user.id })),
     delete: protectedProcedure.input(z.number()).mutation(({ input, ctx }) => deleteAddress(input, ctx.user.id)),

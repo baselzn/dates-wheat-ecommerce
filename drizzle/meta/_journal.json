@@ -43,6 +43,13 @@
       "when": 1772083505380,
       "tag": "0005_bored_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1772184429353,
+      "tag": "0006_eminent_quasar",
+      "breakpoints": true
     }
   ]
 }

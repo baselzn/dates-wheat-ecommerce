@@ -1,5 +1,5 @@
 import Layout from "@/components/Layout";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePixelTrack } from "@/components/PixelManager";
 import { useCartStore } from "@/stores/cartStore";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { CreditCard, MapPin, Package, ShoppingBag, Truck } from "lucide-react";
-import { useState } from "react";
+import { CreditCard, MapPin, Package, ShoppingBag, Truck, Navigation, Map, LogIn, Star, Plus, Home } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { OTPAuthModal } from "@/components/OTPAuthModal";
+import { MapView } from "@/components/Map";
 
 const UAE_EMIRATES = [
   "Abu Dhabi", "Dubai", "Sharjah", "Ajman", "Umm Al Quwain", "Ras Al Khaimah", "Fujairah"
@@ -34,32 +36,152 @@ export default function Checkout() {
   }, []);
 
   const [paymentMethod, setPaymentMethod] = useState<"stripe" | "cod">("cod");
-  const [step, setStep] = useState<"shipping" | "payment" | "review">("shipping");
+  const [step, setStep] = useState<"auth" | "shipping" | "payment" | "review">(isAuthenticated ? "shipping" : "auth");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"signup" | "login">("login");
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [selectedSavedAddress, setSelectedSavedAddress] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     fullName: user?.name || "",
-    phone: "",
+    phone: (user as any)?.phone || "",
     email: user?.email || "",
     addressLine1: "",
     addressLine2: "",
     city: "",
     emirate: "Fujairah",
     notes: "",
+    label: "Home",
+    latitude: "",
+    longitude: "",
+    mapAddress: "",
   });
 
   const createOrder = trpc.orders.create.useMutation();
-  const { data: savedAddresses } = trpc.addresses.list.useQuery(undefined, { enabled: isAuthenticated });
+  const upsertAddress = trpc.addresses.upsert.useMutation();
+  const { data: savedAddresses, refetch: refetchAddresses } = trpc.addresses.list.useQuery(undefined, { enabled: isAuthenticated });
+
+  // When user logs in, advance from auth step to shipping
+  useEffect(() => {
+    if (isAuthenticated && step === "auth") {
+      setStep("shipping");
+      setForm((f) => ({ ...f, fullName: user?.name || f.fullName, phone: (user as any)?.phone || f.phone }));
+    }
+  }, [isAuthenticated]);
+
+  // Pre-fill from default saved address
+  useEffect(() => {
+    if (savedAddresses && savedAddresses.length > 0 && !selectedSavedAddress) {
+      const def = savedAddresses.find((a) => a.isDefault) ?? savedAddresses[0];
+      applyAddress(def);
+    }
+  }, [savedAddresses]);
+
+  function applyAddress(addr: any) {
+    setSelectedSavedAddress(addr.id);
+    setForm((f) => ({
+      ...f,
+      fullName: addr.fullName,
+      phone: addr.phone,
+      addressLine1: addr.addressLine1,
+      addressLine2: addr.addressLine2 || "",
+      city: addr.city,
+      emirate: addr.emirate,
+      label: addr.label || "Home",
+      latitude: addr.latitude || "",
+      longitude: addr.longitude || "",
+      mapAddress: addr.mapAddress || "",
+    }));
+  }
 
   const handleFormChange = (field: string, value: string) => {
+    setSelectedSavedAddress(null);
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleShippingSubmit = (e: React.FormEvent) => {
+  // GPS location
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
+        try {
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ location: { lat: pos.coords.latitude, lng: pos.coords.longitude } }, (results, status) => {
+            if (status === "OK" && results && results[0]) {
+              const addr = results[0];
+              const get = (type: string) => addr.address_components.find((c) => c.types.includes(type))?.long_name || "";
+              setForm((f) => ({
+                ...f,
+                addressLine1: addr.formatted_address.split(",")[0] || f.addressLine1,
+                city: get("locality") || get("sublocality") || f.city,
+                emirate: UAE_EMIRATES.find((e) => addr.formatted_address.toLowerCase().includes(e.toLowerCase())) || f.emirate,
+                mapAddress: addr.formatted_address,
+              }));
+              toast.success("Location detected and address filled");
+            }
+          });
+        } catch { toast.success("Location set: " + lat + ", " + lng); }
+        setIsGettingLocation(false);
+      },
+      (err) => { setIsGettingLocation(false); toast.error("Could not get location: " + err.message); },
+      { timeout: 10000 }
+    );
+  };
+
+  // Map picker
+  const handleMapReady = useCallback((map: google.maps.Map) => {
+    const center = form.latitude && form.longitude
+      ? { lat: parseFloat(form.latitude), lng: parseFloat(form.longitude) }
+      : { lat: 25.1288, lng: 56.3265 };
+    map.setCenter(center);
+    map.setZoom(15);
+    const marker = new google.maps.Marker({ map, draggable: true, position: center });
+    const geocoder = new google.maps.Geocoder();
+    const reverseGeocode = (latLng: google.maps.LatLng) => {
+      geocoder.geocode({ location: latLng }, (results, status) => {
+        if (status === "OK" && results && results[0]) {
+          const addr = results[0];
+          const get = (type: string) => addr.address_components.find((c) => c.types.includes(type))?.long_name || "";
+          setForm((f) => ({
+            ...f,
+            latitude: latLng.lat().toFixed(6),
+            longitude: latLng.lng().toFixed(6),
+            addressLine1: addr.formatted_address.split(",")[0] || f.addressLine1,
+            city: get("locality") || get("sublocality") || f.city,
+            emirate: UAE_EMIRATES.find((e) => addr.formatted_address.toLowerCase().includes(e.toLowerCase())) || f.emirate,
+            mapAddress: addr.formatted_address,
+          }));
+        }
+      });
+    };
+    map.addListener("click", (e: google.maps.MapMouseEvent) => { if (e.latLng) { marker.setPosition(e.latLng); reverseGeocode(e.latLng); } });
+    marker.addListener("dragend", () => { const pos = marker.getPosition(); if (pos) reverseGeocode(pos); });
+  }, []);
+
+  const handleShippingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.fullName || !form.phone || !form.addressLine1 || !form.emirate) {
       toast.error("Please fill all required fields");
       return;
+    }
+    if (isAuthenticated && !selectedSavedAddress) {
+      try {
+        await upsertAddress.mutateAsync({
+          fullName: form.fullName, phone: form.phone,
+          addressLine1: form.addressLine1, addressLine2: form.addressLine2 || undefined,
+          city: form.city, emirate: form.emirate, label: form.label,
+          latitude: form.latitude || undefined, longitude: form.longitude || undefined,
+          mapAddress: form.mapAddress || undefined,
+          isDefault: !savedAddresses || savedAddresses.length === 0,
+        });
+        refetchAddresses();
+      } catch { /* non-blocking */ }
     }
     setStep("payment");
   };
@@ -119,18 +241,29 @@ export default function Checkout() {
     );
   }
 
+  const allSteps: Array<"auth" | "shipping" | "payment" | "review"> = isAuthenticated
+    ? ["shipping", "payment", "review"]
+    : ["auth", "shipping", "payment", "review"];
+  const stepLabels: Record<string, string> = { auth: "Account", shipping: "Shipping", payment: "Payment", review: "Review" };
+
   return (
     <Layout>
+      <OTPAuthModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        mode={authMode}
+        onSuccess={() => { setShowAuthModal(false); setStep("shipping"); }}
+      />
       <div className="bg-[#3E1F00] text-white py-8">
         <div className="container">
           <h1 className="text-3xl font-bold" style={{ fontFamily: "Playfair Display, serif" }}>Checkout</h1>
           {/* Steps */}
           <div className="flex items-center gap-2 mt-4 text-sm">
-            {(["shipping", "payment", "review"] as const).map((s, i) => (
+            {allSteps.map((s, i) => (
               <div key={s} className="flex items-center gap-2">
                 {i > 0 && <span className="text-[#C9A84C]/50">›</span>}
                 <span className={`capitalize ${step === s ? "text-[#C9A84C] font-semibold" : "text-[#E8D5A3]/60"}`}>
-                  {s === "shipping" ? "Shipping" : s === "payment" ? "Payment" : "Review"}
+                  {stepLabels[s]}
                 </span>
               </div>
             ))}
@@ -143,38 +276,135 @@ export default function Checkout() {
           {/* Left: Form */}
           <div className="lg:col-span-2">
             {/* Step 1: Shipping */}
+            {/* AUTH STEP */}
+            {step === "auth" && (
+              <div className="bg-white rounded-xl p-8 border border-[#E8D5A3] text-center">
+                <LogIn className="h-12 w-12 text-[#C9A84C] mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-[#3E1F00] mb-2">Welcome to Dates & Wheat</h2>
+                <p className="text-muted-foreground mb-8">Sign in or create an account to continue checkout — it only takes a minute.</p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto">
+                  <Button
+                    className="flex-1 bg-[#C9A84C] hover:bg-[#9A7A2E] text-white"
+                    onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}
+                  >
+                    <LogIn className="h-4 w-4 mr-2" /> Sign In
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C]/10"
+                    onClick={() => { setAuthMode("signup"); setShowAuthModal(true); }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Create Account
+                  </Button>
+                </div>
+                <div className="mt-6">
+                  <button
+                    className="text-sm text-muted-foreground underline"
+                    onClick={() => setStep("shipping")}
+                  >
+                    Continue as guest
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* SHIPPING STEP */}
             {step === "shipping" && (
               <form onSubmit={handleShippingSubmit} className="bg-white rounded-xl p-6 border border-[#E8D5A3]">
                 <h2 className="text-xl font-bold text-[#3E1F00] mb-6 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-[#C9A84C]" /> Shipping Address
+                  <MapPin className="h-5 w-5 text-[#C9A84C]" /> Delivery Address
                 </h2>
+
+                {/* Guest login prompt */}
+                {!isAuthenticated && (
+                  <div className="mb-6 p-4 rounded-lg bg-[#FFF8E7] border border-[#E8D5A3] flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#3E1F00]">Returning customer?</p>
+                      <p className="text-xs text-muted-foreground">Sign in to use your saved addresses</p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C]/10 shrink-0"
+                      onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}
+                    >
+                      <LogIn className="h-3 w-3 mr-1" /> Sign In
+                    </Button>
+                  </div>
+                )}
 
                 {/* Saved addresses */}
                 {savedAddresses && savedAddresses.length > 0 && (
                   <div className="mb-6">
-                    <p className="text-sm font-medium text-[#3E1F00] mb-2">Saved Addresses</p>
+                    <p className="text-sm font-medium text-[#3E1F00] mb-3 flex items-center gap-2">
+                      <Star className="h-4 w-4 text-[#C9A84C]" /> Saved Addresses
+                    </p>
                     <div className="grid gap-2">
                       {savedAddresses.map((addr) => (
                         <button
                           key={addr.id}
                           type="button"
-                          onClick={() => setForm({
-                            ...form,
-                            fullName: addr.fullName,
-                            phone: addr.phone,
-                            addressLine1: addr.addressLine1,
-                            addressLine2: addr.addressLine2 || "",
-                            city: addr.city,
-                            emirate: addr.emirate,
-                          })}
-                          className="text-left p-3 rounded-lg border border-[#E8D5A3] hover:border-[#C9A84C] transition-colors text-sm"
+                          onClick={() => applyAddress(addr)}
+                          className={`text-left p-3 rounded-lg border-2 transition-all text-sm ${selectedSavedAddress === addr.id ? "border-[#C9A84C] bg-[#FFF8E7]" : "border-[#E8D5A3] hover:border-[#C9A84C]/50"}`}
                         >
-                          <p className="font-medium text-[#3E1F00]">{addr.label || addr.fullName}</p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Home className="h-3 w-3 text-[#C9A84C]" />
+                            <span className="font-semibold text-[#3E1F00]">{addr.label || "Home"}</span>
+                            {addr.isDefault && <Badge className="text-[10px] py-0 h-4 bg-[#C9A84C] text-white">Default</Badge>}
+                          </div>
                           <p className="text-muted-foreground">{addr.addressLine1}, {addr.city}, {addr.emirate}</p>
+                          {addr.mapAddress && <p className="text-xs text-[#C9A84C] mt-1 truncate">{addr.mapAddress}</p>}
                         </button>
                       ))}
                     </div>
-                    <Separator className="my-4 bg-[#E8D5A3]" />
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-[#E8D5A3]" />
+                      <span className="text-xs text-muted-foreground">or enter a new address</span>
+                      <div className="flex-1 h-px bg-[#E8D5A3]" />
+                    </div>
+                  </div>
+                )}
+
+                {/* GPS + Map buttons */}
+                <div className="flex gap-2 mb-5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C]/10"
+                    onClick={handleUseMyLocation}
+                    disabled={isGettingLocation}
+                  >
+                    <Navigation className={`h-4 w-4 mr-2 ${isGettingLocation ? "animate-spin" : ""}`} />
+                    {isGettingLocation ? "Detecting..." : "Use My Location"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#C9A84C]/10"
+                    onClick={() => setShowMapPicker(!showMapPicker)}
+                  >
+                    <Map className="h-4 w-4 mr-2" />
+                    {showMapPicker ? "Hide Map" : "Pick on Map"}
+                  </Button>
+                  {form.latitude && (
+                    <span className="text-xs text-green-600 flex items-center gap-1 ml-auto">
+                      <Navigation className="h-3 w-3" /> Location set
+                    </span>
+                  )}
+                </div>
+
+                {/* Map Picker */}
+                {showMapPicker && (
+                  <div className="mb-5 rounded-xl overflow-hidden border border-[#E8D5A3]" style={{ height: 280 }}>
+                    <MapView onMapReady={handleMapReady} />
+                  </div>
+                )}
+                {form.mapAddress && (
+                  <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-sm text-green-800">
+                    <MapPin className="h-4 w-4 inline mr-1" /> {form.mapAddress}
                   </div>
                 )}
 
@@ -203,7 +433,7 @@ export default function Checkout() {
                   </div>
                   {!isAuthenticated && (
                     <div>
-                      <Label htmlFor="email">Email (for order updates)</Label>
+                      <Label htmlFor="email">Email (optional)</Label>
                       <Input
                         id="email"
                         type="email"
@@ -215,23 +445,23 @@ export default function Checkout() {
                     </div>
                   )}
                   <div className="sm:col-span-2">
-                    <Label htmlFor="address1">Address Line 1 *</Label>
+                    <Label htmlFor="addressLine1">Address Line 1 *</Label>
                     <Input
-                      id="address1"
+                      id="addressLine1"
                       value={form.addressLine1}
                       onChange={(e) => handleFormChange("addressLine1", e.target.value)}
-                      placeholder="Building, Street"
+                      placeholder="Street, building, villa number"
                       required
                       className="mt-1 border-[#E8D5A3] focus:border-[#C9A84C]"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label htmlFor="address2">Address Line 2</Label>
+                    <Label htmlFor="addressLine2">Address Line 2</Label>
                     <Input
-                      id="address2"
+                      id="addressLine2"
                       value={form.addressLine2}
                       onChange={(e) => handleFormChange("addressLine2", e.target.value)}
-                      placeholder="Apartment, Floor (optional)"
+                      placeholder="Apartment, floor, landmark (optional)"
                       className="mt-1 border-[#E8D5A3] focus:border-[#C9A84C]"
                     />
                   </div>
@@ -258,25 +488,38 @@ export default function Checkout() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {isAuthenticated && (
+                    <div>
+                      <Label htmlFor="label">Address Label</Label>
+                      <Select value={form.label} onValueChange={(v) => handleFormChange("label", v)}>
+                        <SelectTrigger className="mt-1 border-[#E8D5A3]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Home">Home</SelectItem>
+                          <SelectItem value="Work">Work</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="sm:col-span-2">
-                    <Label htmlFor="notes">Order Notes (optional)</Label>
+                    <Label htmlFor="notes">Order Notes</Label>
                     <Input
                       id="notes"
                       value={form.notes}
                       onChange={(e) => handleFormChange("notes", e.target.value)}
-                      placeholder="Special instructions, gift message..."
+                      placeholder="Special instructions for delivery (optional)"
                       className="mt-1 border-[#E8D5A3] focus:border-[#C9A84C]"
                     />
                   </div>
                 </div>
-
-                <Button type="submit" className="w-full mt-6 bg-[#C9A84C] hover:bg-[#9A7A2E] text-white font-semibold h-12">
-                  Continue to Payment
+                <Button type="submit" className="w-full mt-6 bg-[#C9A84C] hover:bg-[#9A7A2E] text-white">
+                  Continue to Payment <Truck className="ml-2 h-4 w-4" />
                 </Button>
               </form>
             )}
 
-            {/* Step 2: Payment */}
             {step === "payment" && (
               <div className="bg-white rounded-xl p-6 border border-[#E8D5A3]">
                 <h2 className="text-xl font-bold text-[#3E1F00] mb-6 flex items-center gap-2">

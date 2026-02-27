@@ -20,6 +20,7 @@ export default function Auth() {
   const [, navigate] = useLocation();
 
   // OTP flow state
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
@@ -107,7 +108,7 @@ export default function Auth() {
       const idToken = await verifyFirebaseOtp(confirmationResult, otp);
 
       // Step 2: Exchange Firebase ID token for our app JWT session
-      await firebaseLogin.mutateAsync({ idToken, phone: formatPhone(phone) });
+      await firebaseLogin.mutateAsync({ idToken, phone: formatPhone(phone), name: name.trim() || undefined });
       await utils.auth.me.invalidate();
 
       track("CompleteRegistration", { method: "firebase_otp", currency: "AED", value: 0 });
@@ -197,6 +198,20 @@ export default function Auth() {
               <TabsContent value="customer">
                 {!otpSent ? (
                   <form onSubmit={handleSendOtp} className="space-y-5">
+                    {/* Name input */}
+                    <div>
+                      <Label htmlFor="authName" className="text-[#3E1F00] font-medium">
+                        Full Name <span className="text-muted-foreground font-normal">(new customers)</span>
+                      </Label>
+                      <Input
+                        id="authName"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Your full name"
+                        className="mt-1.5 border-[#E8D5A3] focus:border-[#C9A84C] h-11 text-base"
+                      />
+                    </div>
                     {/* Phone input */}
                     <div>
                       <Label htmlFor="phone" className="text-[#3E1F00] font-medium">
