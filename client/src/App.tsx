@@ -36,6 +36,27 @@ const AdminTracking = lazy(() => import("./pages/admin/Tracking"));
 const AdminDiscountRules = lazy(() => import("./pages/admin/DiscountRules"));
 const AdminWooImporter = lazy(() => import("./pages/admin/WooImporter"));
 const AdminPushNotifications = lazy(() => import("./pages/admin/PushNotifications"));
+// Inventory
+const AdminStockLevels = lazy(() => import("./pages/admin/inventory/StockLevels"));
+const AdminStockMovements = lazy(() => import("./pages/admin/inventory/StockMovements"));
+const AdminWarehouses = lazy(() => import("./pages/admin/inventory/Warehouses"));
+const AdminAdjustments = lazy(() => import("./pages/admin/inventory/Adjustments"));
+const AdminTransfers = lazy(() => import("./pages/admin/inventory/Transfers"));
+// POS
+const AdminPOSTerminal = lazy(() => import("./pages/admin/pos/Terminal"));
+const AdminPOSSessions = lazy(() => import("./pages/admin/pos/Sessions"));
+const AdminPOSOrders = lazy(() => import("./pages/admin/pos/POSOrders"));
+const AdminPaymentMethods = lazy(() => import("./pages/admin/pos/PaymentMethods"));
+// Manufacturing
+const AdminProduction = lazy(() => import("./pages/admin/manufacturing/Production"));
+const AdminRecipes = lazy(() => import("./pages/admin/manufacturing/Recipes"));
+const AdminRawMaterials = lazy(() => import("./pages/admin/manufacturing/RawMaterials"));
+const AdminSuppliers = lazy(() => import("./pages/admin/manufacturing/Suppliers"));
+const AdminPurchaseOrders = lazy(() => import("./pages/admin/manufacturing/PurchaseOrders"));
+// Accounting
+const AdminChartOfAccounts = lazy(() => import("./pages/admin/accounting/ChartOfAccounts"));
+const AdminJournalEntries = lazy(() => import("./pages/admin/accounting/JournalEntries"));
+const AdminAccountingReports = lazy(() => import("./pages/admin/accounting/Reports"));
 
 // Loading fallback for admin pages
 function AdminLoading() {
@@ -161,6 +182,28 @@ function Router() {
           </Suspense>
         )}
       </Route>
+
+      {/* Inventory routes */}
+      <Route path="/admin/inventory/stock">{() => <Suspense fallback={<AdminLoading />}><AdminStockLevels /></Suspense>}</Route>
+      <Route path="/admin/inventory/movements">{() => <Suspense fallback={<AdminLoading />}><AdminStockMovements /></Suspense>}</Route>
+      <Route path="/admin/inventory/warehouses">{() => <Suspense fallback={<AdminLoading />}><AdminWarehouses /></Suspense>}</Route>
+      <Route path="/admin/inventory/adjustments">{() => <Suspense fallback={<AdminLoading />}><AdminAdjustments /></Suspense>}</Route>
+      <Route path="/admin/inventory/transfers">{() => <Suspense fallback={<AdminLoading />}><AdminTransfers /></Suspense>}</Route>
+      {/* POS routes */}
+      <Route path="/admin/pos/terminal">{() => <Suspense fallback={<AdminLoading />}><AdminPOSTerminal /></Suspense>}</Route>
+      <Route path="/admin/pos/sessions">{() => <Suspense fallback={<AdminLoading />}><AdminPOSSessions /></Suspense>}</Route>
+      <Route path="/admin/pos/orders">{() => <Suspense fallback={<AdminLoading />}><AdminPOSOrders /></Suspense>}</Route>
+      <Route path="/admin/pos/payment-methods">{() => <Suspense fallback={<AdminLoading />}><AdminPaymentMethods /></Suspense>}</Route>
+      {/* Manufacturing routes */}
+      <Route path="/admin/manufacturing/production">{() => <Suspense fallback={<AdminLoading />}><AdminProduction /></Suspense>}</Route>
+      <Route path="/admin/manufacturing/recipes">{() => <Suspense fallback={<AdminLoading />}><AdminRecipes /></Suspense>}</Route>
+      <Route path="/admin/manufacturing/raw-materials">{() => <Suspense fallback={<AdminLoading />}><AdminRawMaterials /></Suspense>}</Route>
+      <Route path="/admin/manufacturing/suppliers">{() => <Suspense fallback={<AdminLoading />}><AdminSuppliers /></Suspense>}</Route>
+      <Route path="/admin/manufacturing/purchase-orders">{() => <Suspense fallback={<AdminLoading />}><AdminPurchaseOrders /></Suspense>}</Route>
+      {/* Accounting routes */}
+      <Route path="/admin/accounting/chart-of-accounts">{() => <Suspense fallback={<AdminLoading />}><AdminChartOfAccounts /></Suspense>}</Route>
+      <Route path="/admin/accounting/journal-entries">{() => <Suspense fallback={<AdminLoading />}><AdminJournalEntries /></Suspense>}</Route>
+      <Route path="/admin/accounting/reports">{() => <Suspense fallback={<AdminLoading />}><AdminAccountingReports /></Suspense>}</Route>
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />

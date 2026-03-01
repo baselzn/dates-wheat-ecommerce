@@ -327,3 +327,406 @@ export const adminOtps = mysqlTable("admin_otps", {
   createdAt: bigint("createdAt", { mode: "number" }).notNull(),
 });
 export type AdminOtp = typeof adminOtps.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVENTORY MANAGEMENT MODULE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Warehouses ───────────────────────────────────────────────────────────────
+export const warehouses = mysqlTable("warehouses", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  location: varchar("location", { length: 256 }),
+  address: text("address"),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Warehouse = typeof warehouses.$inferSelect;
+export type InsertWarehouse = typeof warehouses.$inferInsert;
+
+// ─── Stock Levels ─────────────────────────────────────────────────────────────
+export const stockLevels = mysqlTable("stock_levels", {
+  id: int("id").autoincrement().primaryKey(),
+  warehouseId: int("warehouseId").notNull().references(() => warehouses.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  variantId: int("variantId"),
+  qty: decimal("qty", { precision: 12, scale: 3 }).default("0").notNull(),
+  reservedQty: decimal("reservedQty", { precision: 12, scale: 3 }).default("0").notNull(),
+  reorderPoint: decimal("reorderPoint", { precision: 12, scale: 3 }).default("0").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StockLevel = typeof stockLevels.$inferSelect;
+
+// ─── Stock Movements ──────────────────────────────────────────────────────────
+export const stockMovements = mysqlTable("stock_movements", {
+  id: int("id").autoincrement().primaryKey(),
+  type: mysqlEnum("type", [
+    "purchase",       // incoming from supplier
+    "sale",           // outgoing from e-commerce order
+    "pos_sale",       // outgoing from POS
+    "adjustment",     // manual correction
+    "transfer_in",    // received from another warehouse
+    "transfer_out",   // sent to another warehouse
+    "production_in",  // finished goods added from production
+    "production_out", // raw materials consumed by production
+    "return",         // customer return
+    "opening",        // opening stock entry
+  ]).notNull(),
+  warehouseId: int("warehouseId").notNull().references(() => warehouses.id),
+  productId: int("productId").notNull().references(() => products.id),
+  variantId: int("variantId"),
+  qty: decimal("qty", { precision: 12, scale: 3 }).notNull(), // positive = in, negative = out
+  costPerUnit: decimal("costPerUnit", { precision: 10, scale: 4 }),
+  totalCost: decimal("totalCost", { precision: 12, scale: 2 }),
+  refType: varchar("refType", { length: 64 }), // 'order', 'pos_order', 'adjustment', 'production_order', 'transfer'
+  refId: int("refId"),
+  notes: text("notes"),
+  createdBy: int("createdBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type StockMovement = typeof stockMovements.$inferSelect;
+
+// ─── Stock Adjustments ────────────────────────────────────────────────────────
+export const stockAdjustments = mysqlTable("stock_adjustments", {
+  id: int("id").autoincrement().primaryKey(),
+  warehouseId: int("warehouseId").notNull().references(() => warehouses.id),
+  reason: mysqlEnum("reason", [
+    "cycle_count",
+    "damage",
+    "expiry",
+    "theft",
+    "found",
+    "opening_stock",
+    "other",
+  ]).notNull(),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["draft", "confirmed", "cancelled"]).default("draft").notNull(),
+  confirmedBy: int("confirmedBy").references(() => users.id),
+  confirmedAt: timestamp("confirmedAt"),
+  createdBy: int("createdBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type StockAdjustment = typeof stockAdjustments.$inferSelect;
+
+export const stockAdjustmentItems = mysqlTable("stock_adjustment_items", {
+  id: int("id").autoincrement().primaryKey(),
+  adjustmentId: int("adjustmentId").notNull().references(() => stockAdjustments.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id),
+  variantId: int("variantId"),
+  expectedQty: decimal("expectedQty", { precision: 12, scale: 3 }).notNull(),
+  actualQty: decimal("actualQty", { precision: 12, scale: 3 }).notNull(),
+  diff: decimal("diff", { precision: 12, scale: 3 }).notNull(), // actualQty - expectedQty
+  notes: text("notes"),
+});
+export type StockAdjustmentItem = typeof stockAdjustmentItems.$inferSelect;
+
+// ─── Stock Transfers ──────────────────────────────────────────────────────────
+export const stockTransfers = mysqlTable("stock_transfers", {
+  id: int("id").autoincrement().primaryKey(),
+  fromWarehouseId: int("fromWarehouseId").notNull().references(() => warehouses.id),
+  toWarehouseId: int("toWarehouseId").notNull().references(() => warehouses.id),
+  status: mysqlEnum("status", ["draft", "in_transit", "received", "cancelled"]).default("draft").notNull(),
+  notes: text("notes"),
+  createdBy: int("createdBy").references(() => users.id),
+  receivedBy: int("receivedBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  receivedAt: timestamp("receivedAt"),
+});
+export type StockTransfer = typeof stockTransfers.$inferSelect;
+
+export const stockTransferItems = mysqlTable("stock_transfer_items", {
+  id: int("id").autoincrement().primaryKey(),
+  transferId: int("transferId").notNull().references(() => stockTransfers.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id),
+  variantId: int("variantId"),
+  qty: decimal("qty", { precision: 12, scale: 3 }).notNull(),
+  receivedQty: decimal("receivedQty", { precision: 12, scale: 3 }),
+});
+export type StockTransferItem = typeof stockTransferItems.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POS (POINT OF SALE) MODULE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── POS Payment Methods ──────────────────────────────────────────────────────
+export const posPaymentMethods = mysqlTable("pos_payment_methods", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  type: mysqlEnum("type", ["cash", "card", "bank_transfer", "store_credit", "other"]).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+});
+export type PosPaymentMethod = typeof posPaymentMethods.$inferSelect;
+
+// ─── POS Sessions (Shifts) ────────────────────────────────────────────────────
+export const posSessions = mysqlTable("pos_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionNumber: varchar("sessionNumber", { length: 32 }).notNull().unique(),
+  cashierId: int("cashierId").notNull().references(() => users.id),
+  warehouseId: int("warehouseId").notNull().references(() => warehouses.id),
+  status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
+  openingCash: decimal("openingCash", { precision: 10, scale: 2 }).default("0").notNull(),
+  closingCash: decimal("closingCash", { precision: 10, scale: 2 }),
+  expectedCash: decimal("expectedCash", { precision: 10, scale: 2 }),
+  cashVariance: decimal("cashVariance", { precision: 10, scale: 2 }),
+  totalSales: decimal("totalSales", { precision: 12, scale: 2 }).default("0").notNull(),
+  totalOrders: int("totalOrders").default(0).notNull(),
+  notes: text("notes"),
+  openedAt: timestamp("openedAt").defaultNow().notNull(),
+  closedAt: timestamp("closedAt"),
+});
+export type PosSession = typeof posSessions.$inferSelect;
+export type InsertPosSession = typeof posSessions.$inferInsert;
+
+// ─── POS Orders ───────────────────────────────────────────────────────────────
+export const posOrders = mysqlTable("pos_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderNumber: varchar("orderNumber", { length: 32 }).notNull().unique(),
+  sessionId: int("sessionId").notNull().references(() => posSessions.id),
+  customerId: int("customerId").references(() => users.id),
+  customerName: varchar("customerName", { length: 128 }),
+  customerPhone: varchar("customerPhone", { length: 32 }),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  vatAmount: decimal("vatAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 64 }).notNull(),
+  amountPaid: decimal("amountPaid", { precision: 10, scale: 2 }).notNull(),
+  change: decimal("change", { precision: 10, scale: 2 }).default("0").notNull(),
+  status: mysqlEnum("status", ["completed", "refunded", "voided"]).default("completed").notNull(),
+  notes: text("notes"),
+  receiptPrinted: boolean("receiptPrinted").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PosOrder = typeof posOrders.$inferSelect;
+export type InsertPosOrder = typeof posOrders.$inferInsert;
+
+// ─── POS Order Items ──────────────────────────────────────────────────────────
+export const posOrderItems = mysqlTable("pos_order_items", {
+  id: int("id").autoincrement().primaryKey(),
+  posOrderId: int("posOrderId").notNull().references(() => posOrders.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id),
+  variantId: int("variantId"),
+  productName: varchar("productName", { length: 256 }).notNull(),
+  sku: varchar("sku", { length: 64 }),
+  qty: decimal("qty", { precision: 10, scale: 3 }).notNull(),
+  unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  lineTotal: decimal("lineTotal", { precision: 10, scale: 2 }).notNull(),
+});
+export type PosOrderItem = typeof posOrderItems.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MANUFACTURING MODULE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Suppliers ────────────────────────────────────────────────────────────────
+export const suppliers = mysqlTable("suppliers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  code: varchar("code", { length: 32 }).unique(),
+  contactName: varchar("contactName", { length: 128 }),
+  phone: varchar("phone", { length: 32 }),
+  email: varchar("email", { length: 320 }),
+  address: text("address"),
+  country: varchar("country", { length: 64 }).default("UAE"),
+  vatNumber: varchar("vatNumber", { length: 64 }),
+  paymentTerms: varchar("paymentTerms", { length: 128 }),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = typeof suppliers.$inferInsert;
+
+// ─── Raw Materials ────────────────────────────────────────────────────────────
+export const rawMaterials = mysqlTable("raw_materials", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  nameAr: varchar("nameAr", { length: 128 }),
+  code: varchar("code", { length: 64 }).unique(),
+  unit: mysqlEnum("unit", ["kg", "g", "L", "mL", "pcs", "box", "bag", "roll"]).notNull(),
+  costPerUnit: decimal("costPerUnit", { precision: 10, scale: 4 }).default("0").notNull(),
+  stockQty: decimal("stockQty", { precision: 12, scale: 3 }).default("0").notNull(),
+  reorderPoint: decimal("reorderPoint", { precision: 12, scale: 3 }).default("0").notNull(),
+  supplierId: int("supplierId").references(() => suppliers.id),
+  warehouseId: int("warehouseId").references(() => warehouses.id),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type RawMaterial = typeof rawMaterials.$inferSelect;
+export type InsertRawMaterial = typeof rawMaterials.$inferInsert;
+
+// ─── Recipes (Bill of Materials) ──────────────────────────────────────────────
+export const recipes = mysqlTable("recipes", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id),
+  name: varchar("name", { length: 128 }).notNull(),
+  yieldQty: decimal("yieldQty", { precision: 10, scale: 3 }).notNull(), // how many units produced
+  yieldUnit: varchar("yieldUnit", { length: 32 }).default("pcs").notNull(),
+  overheadCost: decimal("overheadCost", { precision: 10, scale: 2 }).default("0").notNull(), // per batch
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Recipe = typeof recipes.$inferSelect;
+export type InsertRecipe = typeof recipes.$inferInsert;
+
+export const recipeIngredients = mysqlTable("recipe_ingredients", {
+  id: int("id").autoincrement().primaryKey(),
+  recipeId: int("recipeId").notNull().references(() => recipes.id, { onDelete: "cascade" }),
+  rawMaterialId: int("rawMaterialId").notNull().references(() => rawMaterials.id),
+  qty: decimal("qty", { precision: 10, scale: 4 }).notNull(),
+  unit: mysqlEnum("unit", ["kg", "g", "L", "mL", "pcs", "box", "bag", "roll"]).notNull(),
+  notes: text("notes"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+});
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+
+// ─── Production Orders ────────────────────────────────────────────────────────
+export const productionOrders = mysqlTable("production_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderNumber: varchar("orderNumber", { length: 32 }).notNull().unique(),
+  recipeId: int("recipeId").notNull().references(() => recipes.id),
+  productId: int("productId").notNull().references(() => products.id),
+  warehouseId: int("warehouseId").references(() => warehouses.id),
+  plannedQty: decimal("plannedQty", { precision: 10, scale: 3 }).notNull(),
+  actualQty: decimal("actualQty", { precision: 10, scale: 3 }),
+  batchNumber: varchar("batchNumber", { length: 64 }),
+  status: mysqlEnum("status", ["draft", "in_progress", "completed", "cancelled"]).default("draft").notNull(),
+  scheduledDate: timestamp("scheduledDate"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  totalMaterialCost: decimal("totalMaterialCost", { precision: 12, scale: 2 }),
+  totalOverheadCost: decimal("totalOverheadCost", { precision: 12, scale: 2 }),
+  totalCost: decimal("totalCost", { precision: 12, scale: 2 }),
+  costPerUnit: decimal("costPerUnit", { precision: 10, scale: 4 }),
+  notes: text("notes"),
+  createdBy: int("createdBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ProductionOrder = typeof productionOrders.$inferSelect;
+export type InsertProductionOrder = typeof productionOrders.$inferInsert;
+
+export const productionOrderIngredients = mysqlTable("production_order_ingredients", {
+  id: int("id").autoincrement().primaryKey(),
+  productionOrderId: int("productionOrderId").notNull().references(() => productionOrders.id, { onDelete: "cascade" }),
+  rawMaterialId: int("rawMaterialId").notNull().references(() => rawMaterials.id),
+  plannedQty: decimal("plannedQty", { precision: 10, scale: 4 }).notNull(),
+  actualQty: decimal("actualQty", { precision: 10, scale: 4 }),
+  unit: mysqlEnum("unit", ["kg", "g", "L", "mL", "pcs", "box", "bag", "roll"]).notNull(),
+  costPerUnit: decimal("costPerUnit", { precision: 10, scale: 4 }),
+  totalCost: decimal("totalCost", { precision: 12, scale: 2 }),
+});
+export type ProductionOrderIngredient = typeof productionOrderIngredients.$inferSelect;
+
+// ─── Purchase Orders ──────────────────────────────────────────────────────────
+export const purchaseOrders = mysqlTable("purchase_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderNumber: varchar("orderNumber", { length: 32 }).notNull().unique(),
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  warehouseId: int("warehouseId").references(() => warehouses.id),
+  status: mysqlEnum("status", ["draft", "sent", "partial", "received", "cancelled"]).default("draft").notNull(),
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).default("0").notNull(),
+  vatAmount: decimal("vatAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+  notes: text("notes"),
+  expectedDate: timestamp("expectedDate"),
+  receivedAt: timestamp("receivedAt"),
+  createdBy: int("createdBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type InsertPurchaseOrder = typeof purchaseOrders.$inferInsert;
+
+export const purchaseOrderItems = mysqlTable("purchase_order_items", {
+  id: int("id").autoincrement().primaryKey(),
+  purchaseOrderId: int("purchaseOrderId").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  rawMaterialId: int("rawMaterialId").notNull().references(() => rawMaterials.id),
+  orderedQty: decimal("orderedQty", { precision: 12, scale: 3 }).notNull(),
+  receivedQty: decimal("receivedQty", { precision: 12, scale: 3 }).default("0").notNull(),
+  unitCost: decimal("unitCost", { precision: 10, scale: 4 }).notNull(),
+  totalCost: decimal("totalCost", { precision: 12, scale: 2 }).notNull(),
+});
+export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACCOUNTING MODULE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Fiscal Years ─────────────────────────────────────────────────────────────
+export const fiscalYears = mysqlTable("fiscal_years", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate").notNull(),
+  isClosed: boolean("isClosed").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type FiscalYear = typeof fiscalYears.$inferSelect;
+
+// ─── Chart of Accounts ────────────────────────────────────────────────────────
+export const accounts = mysqlTable("accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 16 }).notNull().unique(),
+  name: varchar("name", { length: 128 }).notNull(),
+  nameAr: varchar("nameAr", { length: 128 }),
+  type: mysqlEnum("type", ["asset", "liability", "equity", "revenue", "expense", "cogs"]).notNull(),
+  subtype: varchar("subtype", { length: 64 }),
+  parentId: int("parentId"),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  isSystem: boolean("isSystem").default(false).notNull(), // system accounts cannot be deleted
+  balance: decimal("balance", { precision: 14, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Account = typeof accounts.$inferSelect;
+export type InsertAccount = typeof accounts.$inferInsert;
+
+// ─── Journal Entries ──────────────────────────────────────────────────────────
+export const journalEntries = mysqlTable("journal_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  entryNumber: varchar("entryNumber", { length: 32 }).notNull().unique(),
+  date: timestamp("date").notNull(),
+  description: varchar("description", { length: 512 }).notNull(),
+  refType: varchar("refType", { length: 64 }), // 'order', 'pos_order', 'production_order', 'purchase_order', 'manual'
+  refId: int("refId"),
+  status: mysqlEnum("status", ["draft", "posted", "reversed"]).default("draft").notNull(),
+  reversedBy: int("reversedBy"),
+  notes: text("notes"),
+  createdBy: int("createdBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  postedAt: timestamp("postedAt"),
+});
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type InsertJournalEntry = typeof journalEntries.$inferInsert;
+
+// ─── Journal Lines (Debit/Credit) ─────────────────────────────────────────────
+export const journalLines = mysqlTable("journal_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  journalEntryId: int("journalEntryId").notNull().references(() => journalEntries.id, { onDelete: "cascade" }),
+  accountId: int("accountId").notNull().references(() => accounts.id),
+  debit: decimal("debit", { precision: 14, scale: 2 }).default("0").notNull(),
+  credit: decimal("credit", { precision: 14, scale: 2 }).default("0").notNull(),
+  description: varchar("description", { length: 256 }),
+});
+export type JournalLine = typeof journalLines.$inferSelect;
+
+// ─── Tax Rates ────────────────────────────────────────────────────────────────
+export const taxRates = mysqlTable("tax_rates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  rate: decimal("rate", { precision: 6, scale: 4 }).notNull(), // e.g. 0.0500 = 5%
+  type: mysqlEnum("type", ["vat", "withholding", "other"]).default("vat").notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type TaxRate = typeof taxRates.$inferSelect;

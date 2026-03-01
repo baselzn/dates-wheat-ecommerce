@@ -64,6 +64,13 @@
       "when": 1772189085922,
       "tag": "0008_nebulous_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1772381853327,
+      "tag": "0009_lyrical_reavers",
+      "breakpoints": true
     }
   ]
 }

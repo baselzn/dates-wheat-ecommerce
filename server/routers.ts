@@ -13,6 +13,10 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import { getSessionCookieOptions } from "./_core/cookies";
+import { inventoryRouter } from "./routers/inventory";
+import { posRouter } from "./routers/pos";
+import { manufacturingRouter } from "./routers/manufacturing";
+import { accountingRouter } from "./routers/accounting";
 import { ENV } from "./_core/env";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -1222,6 +1226,11 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── Business Modules ─────────────────────────────────────────────
+  inventory: inventoryRouter,
+  pos: posRouter,
+  manufacturing: manufacturingRouter,
+  accounting: accountingRouter,
   // ─── Page Views ─────────────────────────────────────────────
   pageViews: router({
     log: publicProcedure

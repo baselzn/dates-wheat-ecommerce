@@ -203,3 +203,104 @@
 - [x] Vite code splitting: vendor, trpc, ui chunks configured
 - [x] Admin pages lazy-loaded with React.lazy() + Suspense (main bundle 1935 KB -> 1197 KB)
 - [x] Production build completes successfully (33 tests passing, 0 TS errors)
+
+## Inventory Management Module
+- [ ] DB: warehouses table
+- [ ] DB: stock_levels table
+- [ ] DB: stock_movements table
+- [ ] DB: stock_adjustments + stock_adjustment_items tables
+- [ ] Server: inventory tRPC router (CRUD warehouses, stock levels, movements, adjustments)
+- [ ] Admin: Stock Levels page (/admin/inventory) - per-warehouse grid with low-stock alerts
+- [ ] Admin: Stock Movements page (/admin/inventory/movements) - filterable history
+- [ ] Admin: Adjustments page (/admin/inventory/adjustments) - draft/confirm workflow
+- [ ] Admin: Warehouses page (/admin/inventory/warehouses) - CRUD
+- [ ] Integration: auto-deduct stock on e-commerce order placement
+- [ ] Integration: auto-deduct stock on POS sale
+
+## POS Module
+- [ ] DB: pos_sessions table
+- [ ] DB: pos_orders + pos_order_items tables
+- [ ] DB: pos_payment_methods table
+- [ ] Server: POS tRPC router (sessions, orders, items, payment methods)
+- [ ] Admin: POS Terminal page (/admin/pos) - full-screen cashier UI
+- [ ] Admin: POS Sessions page (/admin/pos/sessions) - open/close sessions, shift summary
+- [ ] Admin: POS Orders page (/admin/pos/orders) - order history, receipt view
+- [ ] POS: product search + quick-add to cart
+- [ ] POS: multiple payment methods (cash, card, split)
+- [ ] POS: receipt print view (print-friendly)
+- [ ] POS: cash drawer open/close with opening/closing balance
+- [ ] Integration: POS sale deducts inventory stock_movements
+
+## Manufacturing Module
+- [ ] DB: raw_materials table
+- [ ] DB: recipes + recipe_ingredients tables
+- [ ] DB: production_orders + production_order_ingredients tables
+- [ ] DB: suppliers table
+- [ ] DB: purchase_orders + purchase_order_items tables
+- [ ] Server: manufacturing tRPC router (recipes, production orders, raw materials, suppliers, POs)
+- [ ] Admin: Recipes/BOMs page (/admin/manufacturing/recipes) - ingredient builder
+- [ ] Admin: Production Orders page (/admin/manufacturing/production) - workflow management
+- [ ] Admin: Raw Materials page (/admin/manufacturing/materials) - stock + reorder
+- [ ] Admin: Suppliers page (/admin/manufacturing/suppliers) - CRUD
+- [ ] Admin: Purchase Orders page (/admin/manufacturing/purchases) - draft/receive workflow
+- [ ] Integration: production completion auto-updates inventory
+
+## Accounting Module
+- [ ] DB: accounts (chart of accounts) table
+- [ ] DB: journal_entries + journal_lines tables
+- [ ] DB: fiscal_years table
+- [ ] DB: tax_rates table
+- [ ] Server: accounting tRPC router (accounts, journal entries, reports)
+- [ ] Seed: default UAE chart of accounts (assets/liabilities/equity/revenue/expense)
+- [ ] Admin: Chart of Accounts page (/admin/accounting/accounts) - tree view + CRUD
+- [ ] Admin: Journal Entries page (/admin/accounting/journal) - double-entry form
+- [ ] Admin: P&L Report page (/admin/accounting/pnl) - date range, revenue vs expenses
+- [ ] Admin: Balance Sheet page (/admin/accounting/balance-sheet) - assets vs liabilities+equity
+- [ ] Admin: VAT Report page (/admin/accounting/vat) - input/output VAT summary
+- [ ] Integration: auto-journal on e-commerce order (AR debit, Sales credit, VAT credit)
+- [ ] Integration: auto-journal on POS sale (Cash/Card debit, Sales credit)
+- [ ] Integration: auto-journal on production completion
+
+## Navigation & Routing
+- [ ] Update AdminLayout sidebar with grouped navigation (E-Commerce / Inventory / POS / Manufacturing / Accounting / Tools)
+- [ ] Register all new routes in App.tsx with lazy loading
+- [ ] Write vitest tests for all new routers
+
+## New Business Modules (Phase 2)
+
+### Inventory Management
+- [x] Warehouses CRUD
+- [x] Stock Levels view (per product per warehouse)
+- [x] Stock Movements log
+- [x] Stock Adjustments (cycle count)
+- [x] Stock Transfers between warehouses
+- [x] Inventory tRPC router (warehouses, movements, adjustments, transfers)
+
+### POS (Point of Sale)
+- [x] POS Terminal cashier interface
+- [x] POS Sessions management
+- [x] POS Orders list
+- [x] Payment Methods management
+- [x] POS tRPC router (sessions, orders, payment methods)
+
+### Manufacturing
+- [x] Suppliers CRUD
+- [x] Raw Materials CRUD
+- [x] Recipes / Bill of Materials
+- [x] Production Orders management
+- [x] Purchase Orders with receive workflow
+- [x] Manufacturing tRPC router
+
+### Accounting
+- [x] Chart of Accounts (grouped by type)
+- [x] Journal Entries with double-entry validation
+- [x] Financial Reports (P&L, Balance Sheet)
+- [x] Accounting tRPC router
+
+### Integration
+- [x] All modules wired into AdminLayout sidebar (grouped sections)
+- [x] All routes registered in App.tsx with lazy loading
+- [x] Database schema extended with all new tables
+- [x] Migration applied (0009)
+- [x] Production build passing (0 errors)
+- [x] All 33 tests passing

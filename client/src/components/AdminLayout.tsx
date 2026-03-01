@@ -2,27 +2,132 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  BarChart3, Bell, Box, ChevronRight, Home, LayoutDashboard, LogOut,
-  Package, Percent, Radio, Settings, ShoppingCart, Tag, Users, Warehouse
+  BarChart3, Bell, BookOpen, Box, Calculator, ChevronDown, ChevronRight,
+  ClipboardList, Factory, FlaskConical, Home, LayoutDashboard, LogOut,
+  Package, Percent, Radio, Receipt, Settings, ShoppingCart, Tag, Terminal,
+  TrendingUp, Truck, Users, Warehouse
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Products", href: "/admin/products", icon: Box },
-  { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
-  { label: "Customers", href: "/admin/customers", icon: Users },
-  { label: "Categories", href: "/admin/categories", icon: Tag },
-  { label: "Inventory", href: "/admin/inventory", icon: Warehouse },
-  { label: "Coupons", href: "/admin/coupons", icon: Tag },
-  { label: "Discount Rules", href: "/admin/discount-rules", icon: Percent },
-  { label: "WooCommerce Import", href: "/admin/woo-importer", icon: Package },
-  { label: "Push Notifications", href: "/admin/push-notifications", icon: Bell },
-  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Tracking", href: "/admin/tracking", icon: Radio },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+type NavItem = { label: string; href: string; icon: React.ElementType };
+type NavGroup = { label: string; icon: React.ElementType; items: NavItem[] };
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "E-Commerce",
+    icon: ShoppingCart,
+    items: [
+      { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { label: "Products", href: "/admin/products", icon: Box },
+      { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
+      { label: "Customers", href: "/admin/customers", icon: Users },
+      { label: "Categories", href: "/admin/categories", icon: Tag },
+      { label: "Coupons", href: "/admin/coupons", icon: Percent },
+      { label: "Discount Rules", href: "/admin/discount-rules", icon: Percent },
+    ],
+  },
+  {
+    label: "Inventory",
+    icon: Warehouse,
+    items: [
+      { label: "Stock Levels", href: "/admin/inventory", icon: Warehouse },
+      { label: "Stock Movements", href: "/admin/inventory/movements", icon: TrendingUp },
+      { label: "Adjustments", href: "/admin/inventory/adjustments", icon: ClipboardList },
+      { label: "Transfers", href: "/admin/inventory/transfers", icon: Truck },
+      { label: "Warehouses", href: "/admin/inventory/warehouses", icon: Warehouse },
+    ],
+  },
+  {
+    label: "Point of Sale",
+    icon: Terminal,
+    items: [
+      { label: "POS Terminal", href: "/admin/pos", icon: Terminal },
+      { label: "Sessions", href: "/admin/pos/sessions", icon: Receipt },
+      { label: "POS Orders", href: "/admin/pos/orders", icon: ShoppingCart },
+      { label: "Payment Methods", href: "/admin/pos/payment-methods", icon: Calculator },
+    ],
+  },
+  {
+    label: "Manufacturing",
+    icon: Factory,
+    items: [
+      { label: "Production Orders", href: "/admin/manufacturing/production", icon: Factory },
+      { label: "Recipes / BOMs", href: "/admin/manufacturing/recipes", icon: FlaskConical },
+      { label: "Raw Materials", href: "/admin/manufacturing/materials", icon: Package },
+      { label: "Purchase Orders", href: "/admin/manufacturing/purchases", icon: ClipboardList },
+      { label: "Suppliers", href: "/admin/manufacturing/suppliers", icon: Truck },
+    ],
+  },
+  {
+    label: "Accounting",
+    icon: BookOpen,
+    items: [
+      { label: "Chart of Accounts", href: "/admin/accounting/accounts", icon: BookOpen },
+      { label: "Journal Entries", href: "/admin/accounting/journal", icon: ClipboardList },
+      { label: "P&L Report", href: "/admin/accounting/pnl", icon: TrendingUp },
+      { label: "Balance Sheet", href: "/admin/accounting/balance-sheet", icon: BarChart3 },
+      { label: "VAT Report", href: "/admin/accounting/vat", icon: Calculator },
+      { label: "Tax Rates", href: "/admin/accounting/tax-rates", icon: Percent },
+    ],
+  },
+  {
+    label: "Tools",
+    icon: Settings,
+    items: [
+      { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+      { label: "Push Notifications", href: "/admin/push-notifications", icon: Bell },
+      { label: "Tracking Pixels", href: "/admin/tracking", icon: Radio },
+      { label: "WooCommerce Import", href: "/admin/woo-importer", icon: Package },
+      { label: "Settings", href: "/admin/settings", icon: Settings },
+    ],
+  },
 ];
+
+// Flat list for header title lookup
+const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items);
+
+function NavGroup({ group, location }: { group: NavGroup; location: string }) {
+  const isGroupActive = group.items.some(
+    item => location === item.href || (item.href !== "/admin" && location.startsWith(item.href))
+  );
+  const [open, setOpen] = useState(isGroupActive);
+  const Icon = group.icon;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${
+          isGroupActive ? "text-white" : "text-[#E8D5A3]/60 hover:text-[#E8D5A3]"
+        }`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="text-xs font-semibold uppercase tracking-wider flex-1">{group.label}</span>
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="ml-3 mt-0.5 space-y-0.5 border-l border-white/10 pl-3">
+          {group.items.map(item => {
+            const ItemIcon = item.icon;
+            const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+            return (
+              <Link key={item.href} href={item.href}>
+                <div className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors cursor-pointer ${
+                  isActive ? "bg-[#C9A84C] text-white" : "text-[#E8D5A3]/70 hover:bg-white/10 hover:text-white"
+                }`}>
+                  <ItemIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-sm">{item.label}</span>
+                  {isActive && <ChevronRight className="h-3 w-3 ml-auto" />}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, loading, logout } = useAuth();
@@ -44,6 +149,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!isAuthenticated || user?.role !== "admin") return null;
 
+  const currentLabel = ALL_NAV_ITEMS.find(
+    n => location === n.href || (n.href !== "/admin" && location.startsWith(n.href))
+  )?.label || "Dashboard";
+
   return (
     <div className="min-h-screen flex bg-[#F5ECD7]">
       {/* Sidebar */}
@@ -62,21 +171,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Nav */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
-            return (
-              <Link key={item.href} href={item.href}>
-                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer ${
-                  isActive ? "bg-[#C9A84C] text-white" : "text-[#E8D5A3]/70 hover:bg-white/10 hover:text-white"
-                }`}>
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="text-sm font-medium">{item.label}</span>
-                  {isActive && <ChevronRight className="h-3 w-3 ml-auto" />}
-                </div>
-              </Link>
-            );
-          })}
+          {NAV_GROUPS.map(group => (
+            <NavGroup key={group.label} group={group} location={location} />
+          ))}
         </nav>
 
         {/* Footer */}
@@ -102,9 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top bar */}
         <header className="bg-white border-b border-[#E8D5A3] px-6 py-3 flex items-center justify-between shrink-0">
           <div>
-            <h1 className="font-semibold text-[#3E1F00]">
-              {NAV_ITEMS.find(n => n.href === location || (n.href !== "/admin" && location.startsWith(n.href)))?.label || "Dashboard"}
-            </h1>
+            <h1 className="font-semibold text-[#3E1F00]">{currentLabel}</h1>
           </div>
           <div className="flex items-center gap-3">
             <Badge className="bg-[#F5ECD7] text-[#C9A84C] border-[#C9A84C]">Admin</Badge>
