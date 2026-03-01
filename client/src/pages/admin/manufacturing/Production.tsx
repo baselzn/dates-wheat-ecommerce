@@ -27,7 +27,8 @@ export default function Production() {
 
   const { data: orders = [], isLoading, refetch } = trpc.manufacturing.production.list.useQuery();
   const { data: recipes = [] } = trpc.manufacturing.recipes.list.useQuery();
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
   const { data: detail } = trpc.manufacturing.production.getById.useQuery({ id: showDetail! }, { enabled: !!showDetail });
 
   const createMutation = trpc.manufacturing.production.create.useMutation({

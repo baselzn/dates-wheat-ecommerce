@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `production_order_ingredients` ADD CONSTRAINT `poi_productionOrderId_fk` FOREIGN KEY (`productionOrderId`) REFERENCES `production_orders`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XDmtcLiNQCFHbR.root --database im5rDxWZ47ziDUxareQHeH --execute ALTER TABLE `production_order_ingredients` ADD CONSTRAINT `poi_productionOrderId_fk` FOREIGN KEY (`productionOrderId`) REFERENCES `production_orders`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3081
+}

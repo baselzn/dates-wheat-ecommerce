@@ -1,0 +1,9 @@
+{
+  "query": "SHOW TABLES LIKE 'pos_%'; SHOW TABLES LIKE 'warehouse%'; SHOW TABLES LIKE 'accounts'; SHOW TABLES LIKE 'recipes'; SHOW TABLES LIKE 'raw_materials';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XDmtcLiNQCFHbR.root --database im5rDxWZ47ziDUxareQHeH --execute SHOW TABLES LIKE 'pos_%'; SHOW TABLES LIKE 'warehouse%'; SHOW TABLES LIKE 'accounts'; SHOW TABLES LIKE 'recipes'; SHOW TABLES LIKE 'raw_materials';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2471
+}

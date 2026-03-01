@@ -31,7 +31,8 @@ export default function Transfers() {
 
   const { data: warehouses = [] } = trpc.inventory.warehouses.list.useQuery();
   const { data: transfers = [], isLoading, refetch } = trpc.inventory.transfers.list.useQuery();
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
 
   const createMutation = trpc.inventory.transfers.create.useMutation({
     onSuccess: () => {

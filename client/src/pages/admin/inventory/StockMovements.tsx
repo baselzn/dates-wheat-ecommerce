@@ -38,7 +38,8 @@ export default function StockMovements() {
 
   const { data: movements = [], isLoading, refetch } = trpc.inventory.movements.list.useQuery({ limit: 100 });
   const { data: warehouses = [] } = trpc.inventory.warehouses.list.useQuery();
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
 
   const createMutation = trpc.inventory.movements.create.useMutation({
     onSuccess: () => {

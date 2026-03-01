@@ -34,7 +34,8 @@ export default function POSTerminal() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
   const { data: warehouses = [] } = trpc.inventory.warehouses.list.useQuery();
   const { data: activeSessions = [] } = trpc.pos.sessions.list.useQuery({ limit: 5 });
   const { data: paymentMethods = [] } = trpc.pos.paymentMethods.list.useQuery();

@@ -26,7 +26,8 @@ export default function Recipes() {
   const [ingredients, setIngredients] = useState<IngredientRow[]>([{ rawMaterialId: "", qty: "", unit: "kg", notes: "" }]);
 
   const { data: recipes = [], isLoading, refetch } = trpc.manufacturing.recipes.list.useQuery();
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
   const { data: rawMaterials = [] } = trpc.manufacturing.rawMaterials.list.useQuery();
   const { data: detail } = trpc.manufacturing.recipes.getById.useQuery({ id: showDetail! }, { enabled: !!showDetail });
 

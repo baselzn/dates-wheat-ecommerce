@@ -27,7 +27,8 @@ export default function Adjustments() {
 
   const { data: warehouses = [] } = trpc.inventory.warehouses.list.useQuery();
   const { data: adjustments = [], isLoading, refetch } = trpc.inventory.adjustments.list.useQuery();
-  const { data: products = [] } = trpc.products.list.useQuery({ limit: 500 });
+  const { data: productsData } = trpc.products.list.useQuery({ limit: 500 });
+  const products = productsData?.products ?? [];
 
   const createMutation = trpc.inventory.adjustments.create.useMutation({
     onSuccess: () => {
