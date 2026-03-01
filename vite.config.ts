@@ -186,6 +186,7 @@ const plugins = [
       ],
     },
     workbox: {
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
       globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
       runtimeCaching: [
         {
@@ -230,6 +231,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 3000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          trpc: ["@trpc/client", "@trpc/react-query", "@tanstack/react-query"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-select", "@radix-ui/react-tabs", "@radix-ui/react-tooltip"],
+        },
+      },
+    },
   },
   server: {
     host: true,

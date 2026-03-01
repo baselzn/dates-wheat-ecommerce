@@ -59,6 +59,7 @@ export default function Footer() {
                 { href: "/about", label: "Our Story" },
                 { href: "/contact", label: "Contact Us" },
                 { href: "/auth", label: "Login / Register" },
+                { href: "/track-order", label: "Track My Order" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-[#C9A84C]/80 hover:text-[#C9A84C] transition-colors">
@@ -133,7 +134,11 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-[#C9A84C]/20">
         <div className="container py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#C9A84C]/60">
-          <p>© {new Date().getFullYear()} Dates & Wheat. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <p>© {new Date().getFullYear()} Dates & Wheat. All rights reserved.</p>
+            <span className="hidden sm:inline text-[#C9A84C]/30">·</span>
+            <p>All prices include 5% VAT</p>
+          </div>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-[#C9A84C] transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-[#C9A84C] transition-colors">Terms & Conditions</Link>

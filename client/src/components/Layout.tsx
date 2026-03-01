@@ -4,6 +4,7 @@ import CartDrawer from "./CartDrawer";
 import MobileBottomNav from "./MobileBottomNav";
 import { PushNotificationPrompt } from "./PushNotificationPrompt";
 import PWAInstallBanner from "./PWAInstallBanner";
+import CookieConsent from "./CookieConsent";
 import { useCartStore } from "@/stores/cartStore";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
@@ -99,6 +100,7 @@ export default function Layout({ children, hideFooter }: LayoutProps) {
 
       {/* Push Notification Permission Prompt */}
       <PushNotificationPrompt />
+      <CookieConsent />
     </div>
   );
 }

@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, Download, ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -26,6 +27,27 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
+  const [, navigate] = useLocation();
+
+  const handleExportCSV = () => {
+    if (!data?.orders?.length) return;
+    const headers = ["Order Number", "Date", "Customer", "Phone", "Payment", "Status", "Total (AED)"];
+    const rows = data.orders.map(o => [
+      o.orderNumber,
+      new Date(o.createdAt).toLocaleDateString(),
+      o.shippingFullName,
+      o.shippingPhone,
+      o.paymentMethod,
+      o.status,
+      Number(o.total).toFixed(2),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `orders-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const { data, isLoading, refetch } = trpc.admin.orders.list.useQuery({
     search: search || undefined,
@@ -59,6 +81,10 @@ export default function AdminOrders() {
             <h2 className="text-xl font-bold text-[#3E1F00]">Orders</h2>
             <p className="text-sm text-muted-foreground">{data?.total || 0} total orders</p>
           </div>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#F5ECD7]">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         {/* Filters */}
@@ -103,7 +129,7 @@ export default function AdminOrders() {
                 {isLoading ? (
                   <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
                 ) : data?.orders.map((order) => (
-                  <tr key={order.id} className="border-t border-[#E8D5A3] hover:bg-[#F5ECD7]/30">
+                  <tr key={order.id} className="border-t border-[#E8D5A3] hover:bg-[#F5ECD7]/50 cursor-pointer transition-colors" onClick={() => navigate(`/admin/orders/${order.orderNumber}`)}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-[#C9A84C]">{order.orderNumber}</p>
                       <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>

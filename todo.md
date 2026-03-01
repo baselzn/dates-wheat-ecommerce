@@ -149,3 +149,57 @@
 - [ ] Server: adminVerifyOtp procedure verifies OTP and issues session cookie
 - [ ] OTP stored in DB with 10-minute expiry
 - [ ] /admin route redirects to /admin/login if not authenticated
+
+## Production Readiness Audit
+
+### Security
+- [ ] Install & configure helmet.js (HTTP security headers)
+- [ ] Install express-rate-limit (OTP endpoint rate limiting)
+- [ ] OTP brute-force protection (max 5 attempts per phone per 10 min)
+- [ ] Admin route guard on frontend (redirect non-admins from /admin/*)
+- [ ] Input length validation on all tRPC inputs
+
+### SEO & Meta
+- [ ] Dynamic OG/Twitter meta tags per page (product, category, home)
+- [ ] robots.txt file
+- [ ] sitemap.xml generation endpoint
+- [ ] JSON-LD structured data for products (Product schema)
+- [ ] Canonical URL meta tag in index.html
+
+### UX & Storefront
+- [ ] Real wishlist (persisted to DB for logged-in users, localStorage for guests)
+- [ ] Product search results page (/search?q=)
+- [ ] Breadcrumbs on product detail and category pages
+- [ ] Product reviews display (star rating, review list on product page)
+- [ ] Related products section on product detail page
+- [ ] Loading skeletons for product grid and product detail
+- [ ] Footer with links to Privacy Policy, Terms, Contact
+
+### Checkout & Orders
+- [ ] Order status tracking page (/track-order) for guests
+- [ ] Guest order lookup by order number + phone
+- [ ] Admin orders list: clickable rows linking to /admin/orders/:id
+- [ ] Admin orders: CSV export
+- [ ] Low stock alert badge in admin products list (stock < 10)
+
+### Performance
+- [ ] Image lazy loading on product cards and grids
+- [ ] Vite code splitting (vendor, admin, storefront chunks)
+- [ ] PWA offline fallback page
+
+### Legal & Compliance
+- [ ] Privacy Policy page (/privacy)
+- [ ] Terms & Conditions page (/terms)
+- [ ] VAT clearly shown at checkout (5% UAE VAT)
+
+## Build & Performance Fixes
+- [x] PWA maximumFileSizeToCacheInBytes increased to 5 MB (fixes build failure)
+- [x] Vite code splitting: vendor, trpc, ui chunks configured
+- [x] Admin pages lazy-loaded with React.lazy() + Suspense (main bundle 1935 KB → 1197 KB)
+- [x] Production build completes successfully (33 tests passing, 0 TS errors)
+
+## Build & Performance Fixes
+- [x] PWA maximumFileSizeToCacheInBytes increased to 5 MB (fixes build failure)
+- [x] Vite code splitting: vendor, trpc, ui chunks configured
+- [x] Admin pages lazy-loaded with React.lazy() + Suspense (main bundle 1935 KB -> 1197 KB)
+- [x] Production build completes successfully (33 tests passing, 0 TS errors)
