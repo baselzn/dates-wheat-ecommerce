@@ -310,6 +310,12 @@ export default function Header({ onCartOpen }: HeaderProps) {
                       className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0]">
                       <Package className="h-4 w-4 text-[#C9A84C]" /> My Orders
                     </Link>
+                    {user?.role === "admin" && (
+                      <Link href="/admin" onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-[#C9A84C] bg-[#FFF8F0] hover:bg-[#F5ECD7]">
+                        <Settings className="h-4 w-4" /> Admin Panel
+                      </Link>
+                    )}
                     <button onClick={() => { setMobileOpen(false); logoutMutation.mutate(); }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-600 hover:bg-red-50">
                       <LogOut className="h-4 w-4" /> Sign Out

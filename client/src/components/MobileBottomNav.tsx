@@ -1,6 +1,6 @@
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Grid3X3, ShoppingBag, Store, User } from "lucide-react";
+import { Grid3X3, LayoutDashboard, ShoppingBag, Store, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 interface MobileBottomNavProps {
@@ -54,6 +54,19 @@ export default function MobileBottomNav({ onCategoriesOpen, onCartOpen }: Mobile
             <Grid3X3 className="h-5 w-5" strokeWidth={1.5} />
             <span className="text-[10px] font-semibold">Categories</span>
           </button>
+
+          {/* Admin shortcut — only visible to admin users */}
+          {isAuthenticated && (cachedUser?.role === "admin") && (
+            <Link href="/admin" className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              isActive("/admin") ? "text-[#C9A84C]" : "text-[#3E1F00]/60 hover:text-[#C9A84C]"
+            }`}>
+              <LayoutDashboard className="h-5 w-5" strokeWidth={isActive("/admin") ? 2 : 1.5} />
+              <span className="text-[10px] font-semibold">Admin</span>
+              {isActive("/admin") && (
+                <span className="absolute bottom-0 w-8 h-0.5 rounded-full bg-[#C9A84C]" />
+              )}
+            </Link>
+          )}
 
           {/* Account */}
           <Link href={showAccountLink ? "/account" : "/auth"} className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
