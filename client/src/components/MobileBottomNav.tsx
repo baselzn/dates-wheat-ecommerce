@@ -1,7 +1,6 @@
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Grid3X3, ShoppingBag, Store, User } from "lucide-react";
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 
 interface MobileBottomNavProps {
@@ -12,7 +11,13 @@ interface MobileBottomNavProps {
 export default function MobileBottomNav({ onCategoriesOpen, onCartOpen }: MobileBottomNavProps) {
   const [location] = useLocation();
   const { items } = useCartStore();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  // While auth is loading, check localStorage for a previously stored user
+  // so the icon doesn't flicker to the login page on every page load.
+  const cachedUser = (() => {
+    try { return JSON.parse(localStorage.getItem("manus-runtime-user-info") ?? "null"); } catch { return null; }
+  })();
+  const showAccountLink = isAuthenticated || (loading && !!cachedUser);
   const cartCount = items.reduce((s, i) => s + i.quantity, 0);
 
   const isActive = (href: string) =>
@@ -51,7 +56,7 @@ export default function MobileBottomNav({ onCategoriesOpen, onCartOpen }: Mobile
           </button>
 
           {/* Account */}
-          <Link href={isAuthenticated ? "/account" : "/auth"} className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+          <Link href={showAccountLink ? "/account" : "/auth"} className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
             isActive("/account") || isActive("/auth") ? "text-[#C9A84C]" : "text-[#3E1F00]/60 hover:text-[#C9A84C]"
           }`}>
             <User className="h-5 w-5" strokeWidth={isActive("/account") || isActive("/auth") ? 2 : 1.5} />
