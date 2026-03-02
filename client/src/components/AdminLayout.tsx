@@ -31,7 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Inventory",
     icon: Warehouse,
     items: [
-      { label: "Stock Levels", href: "/admin/inventory", icon: Warehouse },
+      { label: "Stock Levels", href: "/admin/inventory/stock", icon: Warehouse },
       { label: "Stock Movements", href: "/admin/inventory/movements", icon: TrendingUp },
       { label: "Adjustments", href: "/admin/inventory/adjustments", icon: ClipboardList },
       { label: "Transfers", href: "/admin/inventory/transfers", icon: Truck },
@@ -42,7 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Point of Sale",
     icon: Terminal,
     items: [
-      { label: "POS Terminal", href: "/admin/pos", icon: Terminal },
+      { label: "POS Terminal", href: "/admin/pos/terminal", icon: Terminal },
       { label: "Sessions", href: "/admin/pos/sessions", icon: Receipt },
       { label: "POS Orders", href: "/admin/pos/orders", icon: ShoppingCart },
       { label: "Payment Methods", href: "/admin/pos/payment-methods", icon: Calculator },
@@ -54,8 +54,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Production Orders", href: "/admin/manufacturing/production", icon: Factory },
       { label: "Recipes / BOMs", href: "/admin/manufacturing/recipes", icon: FlaskConical },
-      { label: "Raw Materials", href: "/admin/manufacturing/materials", icon: Package },
-      { label: "Purchase Orders", href: "/admin/manufacturing/purchases", icon: ClipboardList },
+      { label: "Raw Materials", href: "/admin/manufacturing/raw-materials", icon: Package },
+      { label: "Purchase Orders", href: "/admin/manufacturing/purchase-orders", icon: ClipboardList },
       { label: "Suppliers", href: "/admin/manufacturing/suppliers", icon: Truck },
     ],
   },
@@ -63,12 +63,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Accounting",
     icon: BookOpen,
     items: [
-      { label: "Chart of Accounts", href: "/admin/accounting/accounts", icon: BookOpen },
-      { label: "Journal Entries", href: "/admin/accounting/journal", icon: ClipboardList },
-      { label: "P&L Report", href: "/admin/accounting/pnl", icon: TrendingUp },
-      { label: "Balance Sheet", href: "/admin/accounting/balance-sheet", icon: BarChart3 },
-      { label: "VAT Report", href: "/admin/accounting/vat", icon: Calculator },
-      { label: "Tax Rates", href: "/admin/accounting/tax-rates", icon: Percent },
+      { label: "Chart of Accounts", href: "/admin/accounting/chart-of-accounts", icon: BookOpen },
+      { label: "Journal Entries", href: "/admin/accounting/journal-entries", icon: ClipboardList },
+      { label: "Financial Reports", href: "/admin/accounting/reports", icon: TrendingUp },
     ],
   },
   {
