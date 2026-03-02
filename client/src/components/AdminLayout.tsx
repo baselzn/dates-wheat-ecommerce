@@ -42,10 +42,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Point of Sale",
     icon: Terminal,
     items: [
+      { label: "Dashboard", href: "/admin/pos/dashboard", icon: LayoutDashboard },
       { label: "POS Terminal", href: "/admin/pos/terminal", icon: Terminal },
       { label: "Sessions", href: "/admin/pos/sessions", icon: Receipt },
       { label: "POS Orders", href: "/admin/pos/orders", icon: ShoppingCart },
       { label: "Payment Methods", href: "/admin/pos/payment-methods", icon: Calculator },
+      { label: "POS Settings", href: "/admin/pos/settings", icon: Settings },
     ],
   },
   {

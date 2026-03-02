@@ -730,3 +730,26 @@ export const taxRates = mysqlTable("tax_rates", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type TaxRate = typeof taxRates.$inferSelect;
+
+// ─── POS Held Orders ──────────────────────────────────────────────────────────
+export const posHeldOrders = mysqlTable("pos_held_orders", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull().references(() => posSessions.id),
+  label: varchar("label", { length: 128 }),
+  customerName: varchar("customerName", { length: 128 }),
+  customerPhone: varchar("customerPhone", { length: 32 }),
+  items: text("items").notNull(), // JSON array of cart items
+  discountAmount: decimal("discountAmount", { precision: 10, scale: 2 }).default("0").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PosHeldOrder = typeof posHeldOrders.$inferSelect;
+
+// ─── POS Settings ─────────────────────────────────────────────────────────────
+export const posSettings = mysqlTable("pos_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type PosSettingsRow = typeof posSettings.$inferSelect;

@@ -47,6 +47,8 @@ const AdminPOSTerminal = lazy(() => import("./pages/admin/pos/Terminal"));
 const AdminPOSSessions = lazy(() => import("./pages/admin/pos/Sessions"));
 const AdminPOSOrders = lazy(() => import("./pages/admin/pos/POSOrders"));
 const AdminPaymentMethods = lazy(() => import("./pages/admin/pos/PaymentMethods"));
+const AdminPOSSettings = lazy(() => import("./pages/admin/pos/Settings"));
+const AdminPOSDashboard = lazy(() => import("./pages/admin/pos/Dashboard"));
 // Manufacturing
 const AdminProduction = lazy(() => import("./pages/admin/manufacturing/Production"));
 const AdminRecipes = lazy(() => import("./pages/admin/manufacturing/Recipes"));
@@ -196,6 +198,8 @@ function Router() {
       <Route path="/admin/pos/sessions">{() => <Suspense fallback={<AdminLoading />}><AdminPOSSessions /></Suspense>}</Route>
       <Route path="/admin/pos/orders">{() => <Suspense fallback={<AdminLoading />}><AdminPOSOrders /></Suspense>}</Route>
       <Route path="/admin/pos/payment-methods">{() => <Suspense fallback={<AdminLoading />}><AdminPaymentMethods /></Suspense>}</Route>
+      <Route path="/admin/pos/settings">{() => <Suspense fallback={<AdminLoading />}><AdminPOSSettings /></Suspense>}</Route>
+      <Route path="/admin/pos/dashboard">{() => <Suspense fallback={<AdminLoading />}><AdminPOSDashboard /></Suspense>}</Route>
       {/* Manufacturing routes — /admin/manufacturing redirects to production */}
       <Route path="/admin/manufacturing">{() => <Redirect to="/admin/manufacturing/production" />}</Route>
       <Route path="/admin/manufacturing/production">{() => <Suspense fallback={<AdminLoading />}><AdminProduction /></Suspense>}</Route>
