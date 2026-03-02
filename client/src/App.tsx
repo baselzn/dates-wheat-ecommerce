@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { lazy, Suspense } from "react";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { PixelManagerProvider } from "./components/PixelManager";
@@ -183,24 +183,28 @@ function Router() {
         )}
       </Route>
 
-      {/* Inventory routes */}
+      {/* Inventory routes — /admin/inventory redirects to stock levels */}
+      <Route path="/admin/inventory">{() => <Redirect to="/admin/inventory/stock" />}</Route>
       <Route path="/admin/inventory/stock">{() => <Suspense fallback={<AdminLoading />}><AdminStockLevels /></Suspense>}</Route>
       <Route path="/admin/inventory/movements">{() => <Suspense fallback={<AdminLoading />}><AdminStockMovements /></Suspense>}</Route>
       <Route path="/admin/inventory/warehouses">{() => <Suspense fallback={<AdminLoading />}><AdminWarehouses /></Suspense>}</Route>
       <Route path="/admin/inventory/adjustments">{() => <Suspense fallback={<AdminLoading />}><AdminAdjustments /></Suspense>}</Route>
       <Route path="/admin/inventory/transfers">{() => <Suspense fallback={<AdminLoading />}><AdminTransfers /></Suspense>}</Route>
-      {/* POS routes */}
+      {/* POS routes — /admin/pos redirects to terminal */}
+      <Route path="/admin/pos">{() => <Redirect to="/admin/pos/terminal" />}</Route>
       <Route path="/admin/pos/terminal">{() => <Suspense fallback={<AdminLoading />}><AdminPOSTerminal /></Suspense>}</Route>
       <Route path="/admin/pos/sessions">{() => <Suspense fallback={<AdminLoading />}><AdminPOSSessions /></Suspense>}</Route>
       <Route path="/admin/pos/orders">{() => <Suspense fallback={<AdminLoading />}><AdminPOSOrders /></Suspense>}</Route>
       <Route path="/admin/pos/payment-methods">{() => <Suspense fallback={<AdminLoading />}><AdminPaymentMethods /></Suspense>}</Route>
-      {/* Manufacturing routes */}
+      {/* Manufacturing routes — /admin/manufacturing redirects to production */}
+      <Route path="/admin/manufacturing">{() => <Redirect to="/admin/manufacturing/production" />}</Route>
       <Route path="/admin/manufacturing/production">{() => <Suspense fallback={<AdminLoading />}><AdminProduction /></Suspense>}</Route>
       <Route path="/admin/manufacturing/recipes">{() => <Suspense fallback={<AdminLoading />}><AdminRecipes /></Suspense>}</Route>
       <Route path="/admin/manufacturing/raw-materials">{() => <Suspense fallback={<AdminLoading />}><AdminRawMaterials /></Suspense>}</Route>
       <Route path="/admin/manufacturing/suppliers">{() => <Suspense fallback={<AdminLoading />}><AdminSuppliers /></Suspense>}</Route>
       <Route path="/admin/manufacturing/purchase-orders">{() => <Suspense fallback={<AdminLoading />}><AdminPurchaseOrders /></Suspense>}</Route>
-      {/* Accounting routes */}
+      {/* Accounting routes — /admin/accounting redirects to chart of accounts */}
+      <Route path="/admin/accounting">{() => <Redirect to="/admin/accounting/chart-of-accounts" />}</Route>
       <Route path="/admin/accounting/chart-of-accounts">{() => <Suspense fallback={<AdminLoading />}><AdminChartOfAccounts /></Suspense>}</Route>
       <Route path="/admin/accounting/journal-entries">{() => <Suspense fallback={<AdminLoading />}><AdminJournalEntries /></Suspense>}</Route>
       <Route path="/admin/accounting/reports">{() => <Suspense fallback={<AdminLoading />}><AdminAccountingReports /></Suspense>}</Route>

@@ -10,6 +10,7 @@ import {
   stockLevels,
   stockMovements,
   users,
+  warehouses,
 } from "../../drizzle/schema";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -74,6 +75,7 @@ const sessionsRouter = router({
           cashierId: posSessions.cashierId,
           cashierName: users.name,
           warehouseId: posSessions.warehouseId,
+          warehouseName: warehouses.name,
           status: posSessions.status,
           openingCash: posSessions.openingCash,
           closingCash: posSessions.closingCash,
@@ -86,6 +88,7 @@ const sessionsRouter = router({
         })
         .from(posSessions)
         .leftJoin(users, eq(posSessions.cashierId, users.id))
+        .leftJoin(warehouses, eq(posSessions.warehouseId, warehouses.id))
         .orderBy(desc(posSessions.openedAt))
         .limit(input?.limit ?? 20);
     }),
