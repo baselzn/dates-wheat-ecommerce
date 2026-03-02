@@ -1,0 +1,34 @@
+{
+  "query": "SELECT type, COUNT(*) as count FROM accounts GROUP BY type ORDER BY FIELD(type, 'asset','liability','equity','revenue','cogs','expense');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XDmtcLiNQCFHbR.root --database im5rDxWZ47ziDUxareQHeH --execute SELECT type, COUNT(*) as count FROM accounts GROUP BY type ORDER BY FIELD(type, 'asset','liability','equity','revenue','cogs','expense');",
+  "rows": [
+    {
+      "type": "asset",
+      "count": "16"
+    },
+    {
+      "type": "liability",
+      "count": "10"
+    },
+    {
+      "type": "equity",
+      "count": "4"
+    },
+    {
+      "type": "revenue",
+      "count": "8"
+    },
+    {
+      "type": "cogs",
+      "count": "7"
+    },
+    {
+      "type": "expense",
+      "count": "14"
+    }
+  ],
+  "messages": [],
+  "stdout": "type\tcount\nasset\t16\nliability\t10\nequity\t4\nrevenue\t8\ncogs\t7\nexpense\t14\n",
+  "stderr": "",
+  "execution_time_ms": 1583
+}
