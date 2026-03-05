@@ -29,6 +29,7 @@ import OrderTracking from "./pages/OrderTracking";
 
 // E-Commerce Enhancement admin pages (lazily loaded)
 const AdminFeatureFlags = lazy(() => import("./pages/admin/FeatureFlags"));
+const AdminQAManagement = lazy(() => import("./pages/admin/ecommerce/QAManagement"));
 
 // Admin pages (lazily loaded — split into separate chunks)
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -197,6 +198,7 @@ function Router() {
           </Suspense>
         )}
       </Route>
+      <Route path="/admin/ecommerce/qa">{() => <Suspense fallback={<AdminLoading />}><AdminQAManagement /></Suspense>}</Route>
       <Route path="/admin/feature-flags">
         {() => (
           <Suspense fallback={<AdminLoading />}>

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Bell, BookOpen, Box, Calculator, ChevronDown, ChevronRight,
   ClipboardList, Factory, FlaskConical, Home, LayoutDashboard, LogOut,
-  Package, Percent, Radio, Receipt, Settings, ShoppingCart, Tag, Terminal,
+  MessageCircle, Package, Percent, Radio, Receipt, Settings, ShoppingCart, Tag, Terminal,
   TrendingUp, Truck, Users, Warehouse, ToggleLeft
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,6 +25,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Categories", href: "/admin/categories", icon: Tag },
       { label: "Coupons", href: "/admin/coupons", icon: Percent },
       { label: "Discount Rules", href: "/admin/discount-rules", icon: Percent },
+      { label: "Product Q&A", href: "/admin/ecommerce/qa", icon: MessageCircle },
     ],
   },
   {

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, Package, RefreshCw, Search, Warehouse } from "lucide-react";
+import { AlertTriangle, Bell, Package, RefreshCw, Search, Warehouse } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export default function StockLevels() {
   const [search, setSearch] = useState("");
@@ -18,6 +19,16 @@ export default function StockLevels() {
     warehouseFilter !== "all" ? { warehouseId: parseInt(warehouseFilter) } : undefined
   );
   const { data: lowStock = [] } = trpc.inventory.stockLevels.lowStock.useQuery();
+  const checkAndNotify = trpc.inventory.alerts.checkAndNotify.useMutation({
+    onSuccess: (data) => {
+      if (data.sent) {
+        toast.success(`Low stock alert sent for ${data.count} product${data.count > 1 ? "s" : ""}!`);
+      } else {
+        toast.info("All products are above their reorder points. No alert needed.");
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const filtered = stockLevels.filter(s =>
     !search || s.productName?.toLowerCase().includes(search.toLowerCase()) || s.productSku?.toLowerCase().includes(search.toLowerCase())
@@ -88,9 +99,22 @@ export default function StockLevels() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Stock Levels</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
-                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-              </Button>
+              <div className="flex gap-2">
+                {lowStock.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-amber-500 hover:bg-amber-600 text-white gap-1.5"
+                    disabled={checkAndNotify.isPending}
+                    onClick={() => checkAndNotify.mutate()}
+                  >
+                    <Bell className="h-4 w-4" />
+                    Notify Owner ({lowStock.length})
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

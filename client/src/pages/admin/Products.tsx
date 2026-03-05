@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
-import { Edit, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
+import { Download, Edit, Plus, Search, Star, Trash2, Upload, X } from "lucide-react";
+import { exportToCsv } from "@/lib/csvExport";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -223,9 +224,36 @@ export default function AdminProducts() {
             <h2 className="text-xl font-bold text-[#3E1F00]">Products</h2>
             <p className="text-sm text-muted-foreground">{data?.total || 0} total products</p>
           </div>
-          <Button onClick={() => handleOpen()} className="bg-[#C9A84C] hover:bg-[#9A7A2E] text-white">
-            <Plus className="h-4 w-4 mr-2" /> Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (!data?.products?.length) return;
+                exportToCsv(
+                  `products-${new Date().toISOString().slice(0, 10)}.csv`,
+                  ["ID", "Name (EN)", "Name (AR)", "SKU", "Category ID", "Price (AED)", "Stock", "Active", "Featured"],
+                  data.products.map((p) => [
+                    p.id,
+                    p.nameEn,
+                    p.nameAr ?? "",
+                    p.sku ?? "",
+                    p.categoryId ?? "",
+                    Number(p.basePrice).toFixed(2),
+                    p.stockQty ?? 0,
+                    p.isActive ? "Yes" : "No",
+                    p.isFeatured ? "Yes" : "No",
+                  ])
+                );
+              }}
+              className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#F5ECD7]"
+            >
+              <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+            <Button onClick={() => handleOpen()} className="bg-[#C9A84C] hover:bg-[#9A7A2E] text-white">
+              <Plus className="h-4 w-4 mr-2" /> Add Product
+            </Button>
+          </div>
         </div>
 
         {/* Search */}

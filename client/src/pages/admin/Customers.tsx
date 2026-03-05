@@ -2,7 +2,9 @@ import AdminLayout from "@/components/AdminLayout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Download, Search } from "lucide-react";
+import { exportToCsv } from "@/lib/csvExport";
 import { useState } from "react";
 
 export default function AdminCustomers() {
@@ -18,6 +20,30 @@ export default function AdminCustomers() {
             <h2 className="text-xl font-bold text-[#3E1F00]">Customers</h2>
             <p className="text-sm text-muted-foreground">{data?.total || 0} registered customers</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (!data?.customers?.length) return;
+              exportToCsv(
+                `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+                ["ID", "Name", "Email", "Phone", "Role", "Orders", "Total Spent (AED)", "Joined"],
+                data.customers.map((c) => [
+                  c.id,
+                  c.name ?? "",
+                  c.email ?? "",
+                  c.phone ?? "",
+                  c.role,
+                  c.orderCount ?? 0,
+                  Number(c.totalSpent ?? 0).toFixed(2),
+                  new Date(c.createdAt).toLocaleDateString(),
+                ])
+              );
+            }}
+            className="border-[#C9A84C] text-[#C9A84C] hover:bg-[#F5ECD7]"
+          >
+            <Download className="h-4 w-4 mr-2" /> Export CSV
+          </Button>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

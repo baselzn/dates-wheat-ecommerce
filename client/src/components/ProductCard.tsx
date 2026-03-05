@@ -110,6 +110,11 @@ export default function ProductCard({
                 Out of Stock
               </Badge>
             )}
+            {!outOfStock && stockQty > 0 && stockQty <= 5 && (
+              <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0.5">
+                Only {stockQty} left!
+              </Badge>
+            )}
           </div>
 
           {/* Wishlist */}

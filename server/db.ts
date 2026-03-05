@@ -521,6 +521,15 @@ export async function updateOrderStatus(id: number, status: string, paymentStatu
   if (paymentStatus) update.paymentStatus = paymentStatus;
   if (trackingNumber) update.trackingNumber = trackingNumber;
   await db.update(orders).set(update).where(eq(orders.id, id));
+  // Auto-post journal entry when payment is confirmed
+  if (paymentStatus === "paid") {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+    if (order) {
+      import("./accounting").then(({ autoPostOrderJournal }) =>
+        autoPostOrderJournal(order).catch((e: Error) => console.warn("[Accounting] Auto-post failed:", e.message))
+      ).catch(() => {});
+    }
+  }
 }
 
 export async function updateOrderStripe(id: number, paymentIntentId: string, sessionId?: string) {
@@ -532,6 +541,13 @@ export async function updateOrderStripe(id: number, paymentIntentId: string, ses
     paymentStatus: "paid",
     status: "confirmed",
   }).where(eq(orders.id, id));
+  // Auto-post journal entry for Stripe payments
+  const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  if (order) {
+    import("./accounting").then(({ autoPostOrderJournal }) =>
+      autoPostOrderJournal(order).catch((e: Error) => console.warn("[Accounting] Auto-post failed:", e.message))
+    ).catch(() => {});
+  }
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────

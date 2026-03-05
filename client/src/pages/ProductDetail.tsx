@@ -1,5 +1,7 @@
 import Layout from "@/components/Layout";
 import ProductQA from "@/components/ProductQA";
+import RecentlyViewedSection from "@/components/RecentlyViewedSection";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
@@ -9,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useCartStore } from "@/stores/cartStore";
 import { ChevronLeft, Heart, Minus, Package, Plus, Share2, ShoppingCart, Star, Truck } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -30,6 +32,24 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [wishlist, setWishlist] = useState(false);
+
+  // Track this product as recently viewed
+  useEffect(() => {
+    if (product) {
+      addRecentlyViewed({
+        id: product.id,
+        slug: product.slug,
+        nameEn: product.nameEn,
+        nameAr: product.nameAr,
+        basePrice: product.basePrice,
+        comparePrice: product.comparePrice,
+        images: (product.images as string[] | null) ?? [],
+        isGlutenFree: product.isGlutenFree ?? false,
+        isSugarFree: product.isSugarFree ?? false,
+        stockQty: product.stockQty ?? 100,
+      });
+    }
+  }, [product?.id]);
 
   if (isLoading) {
     return (
@@ -320,6 +340,8 @@ export default function ProductDetail() {
           </div>
         )}
       </div>
+      {/* Recently Viewed */}
+      <RecentlyViewedSection excludeId={product.id} limit={6} />
     </Layout>
   );
 }

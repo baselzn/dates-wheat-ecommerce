@@ -1,18 +1,106 @@
 import Layout from "@/components/Layout";
+import RecentlyViewedSection from "@/components/RecentlyViewedSection";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { ArrowRight, Award, ChevronRight, Gift, Leaf, ShieldCheck, Star, Truck } from "lucide-react";
+import { ArrowRight, Award, ChevronRight, Gift, Leaf, ShieldCheck, Star, Truck, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { useEffect } from "react";
 import { usePixelTrack } from "@/components/PixelManager";
+
+// ─── Flash Sale Banner ─────────────────────────────────────────────────────────
+type FlashSaleProduct = {
+  id: number;
+  productId: number;
+  productNameEn: string;
+  productNameAr: string | null;
+  productBasePrice: string;
+  productSlug: string;
+  saleName: string;
+  discountType: string;
+  discountValue: string;
+  salePrice: string;
+  endsAt: Date | string;
+};
+
+function useCountdown(endsAt: Date | string) {
+  const getRemaining = () => {
+    const diff = new Date(endsAt).getTime() - Date.now();
+    if (diff <= 0) return { h: 0, m: 0, s: 0 };
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return { h, m, s };
+  };
+  const [time, setTime] = useState(getRemaining);
+  useEffect(() => {
+    const t = setInterval(() => setTime(getRemaining()), 1000);
+    return () => clearInterval(t);
+  }, [endsAt]);
+  return time;
+}
+
+function FlashSaleBanner({ sale }: { sale: FlashSaleProduct }) {
+  const { h, m, s } = useCountdown(sale.endsAt);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const isExpired = h === 0 && m === 0 && s === 0;
+  if (isExpired) return null;
+  return (
+    <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1A0A00 0%, #7B1D1D 50%, #1A0A00 100%)" }}>
+      <div className="absolute inset-0 opacity-10" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C9A84C' fill-opacity='1'%3E%3Cpath d='M30 0L37 7L30 14L23 7L30 0ZM30 46L37 53L30 60L23 53L30 46ZM0 30L7 23L14 30L7 37L0 30ZM46 30L53 23L60 30L53 37L46 30Z'/%3E%3C/g%3E%3C/svg%3E")`,
+      }} />
+      <div className="container py-6 relative">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shrink-0 animate-pulse">
+              <Zap className="w-5 h-5 text-white fill-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-widest text-red-400">Flash Sale</span>
+                <Badge className="bg-red-500 text-white text-xs px-1.5 py-0 border-0">LIVE</Badge>
+              </div>
+              <h3 className="text-white font-bold text-lg leading-tight" style={{ fontFamily: "Playfair Display, serif" }}>
+                {sale.saleName}
+              </h3>
+            </div>
+          </div>
+
+          {/* Countdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-[#E8D5A3]/70 text-sm mr-1">Ends in</span>
+            {[[pad(h), "HRS"], [pad(m), "MIN"], [pad(s), "SEC"]].map(([val, lbl]) => (
+              <div key={lbl} className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-black/40 border border-[#C9A84C]/30 rounded-lg flex items-center justify-center">
+                  <span className="text-xl font-bold text-white tabular-nums">{val}</span>
+                </div>
+                <span className="text-[10px] text-[#E8D5A3]/60 mt-0.5 tracking-widest">{lbl}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <Link href="/flash-sales">
+            <Button className="bg-red-500 hover:bg-red-600 text-white font-bold gap-2 px-6 shadow-lg shadow-red-900/30">
+              <Zap className="w-4 h-4 fill-white" /> Shop Flash Sale
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const { track } = usePixelTrack();
   useEffect(() => { track("PageView", { page_path: "/", page_title: "Home" }); }, []);
   const { data: featuredData } = trpc.products.list.useQuery({ isFeatured: true, limit: 8 });
   const { data: categories } = trpc.categories.list.useQuery();
   const { data: newArrivals } = trpc.products.list.useQuery({ limit: 4, sortBy: "newest" });
+  const { data: flashSalesData } = trpc.ecommerce.flashSales.active.useQuery();
+  const activeSale = flashSalesData?.[0]; // Show first active flash sale
 
   const features = [
     { icon: <Award className="h-6 w-6" />, title: "Premium Quality", desc: "Handcrafted with finest ingredients" },
@@ -180,6 +268,11 @@ export default function Home() {
         </section>
       )}
 
+      {/* Flash Sales Banner — only shown when a sale is active */}
+      {activeSale && (
+        <FlashSaleBanner sale={activeSale} />
+      )}
+
       {/* Featured Products */}
       {featuredData && featuredData.products.length > 0 && (
         <section className="py-16 bg-white">
@@ -276,6 +369,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Recently Viewed */}
+      <RecentlyViewedSection limit={6} />
 
       {/* WhatsApp CTA */}
       <a

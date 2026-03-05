@@ -343,3 +343,38 @@
 ### Quality
 - [x] 0 TypeScript errors
 - [x] 33 tests passing
+
+## Sprint 2 — Continued Build
+
+### Admin & E-Commerce
+- [ ] Admin Q&A Management page (/admin/ecommerce/qa) — list all questions across products, answer inline, publish/unpublish, delete
+- [ ] Flash Sales homepage banner — prominent strip with countdown timer linking to /flash-sales
+- [ ] Stock Urgency indicators — "Only N left!" badge on product cards when stock < 5
+- [ ] Recently Viewed products — track in localStorage, show horizontal scroll on homepage and product pages
+
+### Inventory
+- [ ] Reorder Point Alerts — set min stock level per product; push notification + admin alert when stock falls below threshold
+- [ ] Reorder settings in product admin form (reorderPoint field)
+- [ ] Low stock dashboard widget in admin inventory
+
+### Accounting Integration
+- [ ] Auto-post journal entries from e-commerce orders (AR debit, Sales credit, VAT credit)
+- [ ] Auto-post journal entries from POS sales (Cash debit, Sales credit)
+
+### Admin UX
+- [ ] CSV export for orders list
+- [ ] CSV export for products list
+- [ ] Column sorting on admin orders table
+
+## Sprint 2 — Continued E-Commerce Build (COMPLETED)
+- [x] Admin Q&A Management page (/admin/ecommerce/qa) — list all questions, answer inline, toggle publish, delete
+- [x] Flash Sales banner on homepage — shows active sale name, countdown timer, CTA link; auto-hides when no active sale
+- [x] Stock urgency badges on ProductCard — "Only N left!" badge when stockQty < 5
+- [x] Recently Viewed products — localStorage tracking hook + horizontal scroll section on homepage and product detail
+- [x] Reorder Point Alerts — inventory.alerts.checkAndNotify mutation sends owner push notification listing all below-reorder-point products; "Notify Owner (N)" button appears in Stock Levels page when alerts exist
+- [x] Auto-post journal entries — autoPostOrderJournal() called in updateOrderStatus (paid) and updateOrderStripe; autoPostPOSJournal() helper ready; uses code-based account lookup (1000/1100/4000/2200/4100)
+- [x] CSV export utility (client/src/lib/csvExport.ts) — BOM-prefixed, Excel-compatible
+- [x] CSV export on Orders admin page (already existed, confirmed)
+- [x] CSV export on Products admin page — "Export CSV" button added to toolbar
+- [x] CSV export on Customers admin page — "Export CSV" button added to toolbar
+- [x] 0 TypeScript errors, 33 tests passing

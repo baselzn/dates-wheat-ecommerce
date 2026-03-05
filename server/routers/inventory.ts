@@ -13,6 +13,7 @@ import {
 } from "../../drizzle/schema";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { notifyOwner } from "../_core/notification";
 
 // ─── Warehouses ──────────────────────────────────────────────────────────────
 const warehouseRouter = router({
@@ -459,10 +460,40 @@ const transfersRouter = router({
     }),
 });
 
+// ─── Low Stock Alerts ─────────────────────────────────────────────────────────
+const alertsRouter = router({
+  checkAndNotify: protectedProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const lowItems = await db
+      .select({
+        productName: products.nameEn,
+        productSku: products.sku,
+        warehouseName: warehouses.name,
+        qty: stockLevels.qty,
+        reorderPoint: stockLevels.reorderPoint,
+      })
+      .from(stockLevels)
+      .leftJoin(warehouses, eq(stockLevels.warehouseId, warehouses.id))
+      .leftJoin(products, eq(stockLevels.productId, products.id))
+      .where(lt(stockLevels.qty, stockLevels.reorderPoint));
+    if (lowItems.length === 0) return { sent: false, count: 0 };
+    const lines = lowItems.map((item) =>
+      `• ${item.productName ?? "Unknown"} (SKU: ${item.productSku ?? "N/A"}) @ ${item.warehouseName ?? "Main"}: ${Number(item.qty).toFixed(0)} units (reorder at ${Number(item.reorderPoint).toFixed(0)})`
+    ).join("\n");
+    await notifyOwner({
+      title: `⚠️ Low Stock Alert — ${lowItems.length} product${lowItems.length > 1 ? "s" : ""} need restocking`,
+      content: `The following products are below their reorder point:\n\n${lines}\n\nPlease review inventory and place purchase orders as needed.`,
+    });
+    return { sent: true, count: lowItems.length };
+  }),
+});
+
 export const inventoryRouter = router({
   warehouses: warehouseRouter,
   stockLevels: stockLevelsRouter,
   movements: movementsRouter,
   adjustments: adjustmentsRouter,
   transfers: transfersRouter,
+  alerts: alertsRouter,
 });
