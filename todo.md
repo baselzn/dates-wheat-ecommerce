@@ -501,3 +501,16 @@
 - [ ] Data Tables upgrade — column sorting, bulk actions, row-level actions menu
 - [ ] Inline Editing — edit product price/stock directly in table row
 - [ ] Admin dark mode — full dark theme for admin panel
+
+## Sprint 3 — POS, Inventory, Accounting & UI (COMPLETED)
+
+- [x] POS Favorites tab in Terminal (star toggle on product cards, Favorites tab grid)
+- [x] POS Z-Report page at /admin/pos/z-report (end-of-day summary with print)
+- [x] Inventory Batch/Lot Tracking — schema (inventory_batches table), server router, UI page
+- [x] Inventory Forecasting page — 30-day velocity, stockout date predictions
+- [x] VAT Return Preparation page — quarterly summary with Box 1-6 ZATCA format, CSV export
+- [x] Command Palette (Cmd+K) — 40+ admin pages, keyboard navigation, search button in header
+- [x] Forecasting and VAT Return nav links added to AdminLayout
+- [x] Chart of Accounts seeded (65 accounts), auto-posting account codes corrected
+- [x] Sales Discounts account (4200) added for coupon/discount deductions
+- [x] All 7 auto-posting accounts marked as system accounts (protected from deletion)

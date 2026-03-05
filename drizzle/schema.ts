@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  date,
   decimal,
   int,
   json,
@@ -934,3 +935,42 @@ export const referralUses = mysqlTable("referral_uses", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type ReferralUse = typeof referralUses.$inferSelect;
+
+// ─── POS Split Payments ───────────────────────────────────────────────────────
+export const posSplitPayments = mysqlTable("pos_split_payments", {
+  id: int("id").autoincrement().primaryKey(),
+  posOrderId: int("posOrderId").notNull().references(() => posOrders.id, { onDelete: "cascade" }),
+  paymentMethod: varchar("paymentMethod", { length: 64 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  reference: varchar("reference", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PosSplitPayment = typeof posSplitPayments.$inferSelect;
+
+// ─── POS Product Favorites ────────────────────────────────────────────────────
+export const posFavorites = mysqlTable("pos_favorites", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PosFavorite = typeof posFavorites.$inferSelect;
+
+// ─── Inventory Batches (Lot/Batch Tracking) ───────────────────────────────────
+export const inventoryBatches = mysqlTable("inventory_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  warehouseId: int("warehouseId").notNull().references(() => warehouses.id, { onDelete: "cascade" }),
+  batchNumber: varchar("batchNumber", { length: 64 }).notNull(),
+  lotNumber: varchar("lotNumber", { length: 64 }),
+  expiryDate: date("expiryDate"),
+  manufactureDate: date("manufactureDate"),
+  quantity: decimal("quantity", { precision: 12, scale: 3 }).default("0").notNull(),
+  costPerUnit: decimal("costPerUnit", { precision: 10, scale: 4 }),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type InventoryBatch = typeof inventoryBatches.$inferSelect;
+export type InsertInventoryBatch = typeof inventoryBatches.$inferInsert;

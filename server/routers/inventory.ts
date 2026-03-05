@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
+  inventoryBatches,
   products,
   stockAdjustmentItems,
   stockAdjustments,
@@ -489,6 +490,78 @@ const alertsRouter = router({
   }),
 });
 
+// ─── Inventory Batches / Lot Tracking ──────────────────────────────────────────────
+const batchesRouter = router({
+  list: protectedProcedure
+    .input(z.object({
+      search: z.string().optional(),
+      productId: z.number().optional(),
+      expiringWithinDays: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const searchQ = input?.search ? `%${input.search}%` : null;
+      const [rows] = await db.execute(sql`
+        SELECT b.id, b.productId, b.warehouseId, b.batchNumber, b.lotNumber,
+          b.expiryDate, b.manufactureDate, b.quantity, b.costPerUnit,
+          b.isActive, b.notes, b.createdAt,
+          p.nameEn as productNameEn, p.sku as productSku,
+          w.name as warehouseName
+        FROM inventory_batches b
+        LEFT JOIN products p ON p.id = b.productId
+        LEFT JOIN warehouses w ON w.id = b.warehouseId
+        WHERE
+          (${searchQ} IS NULL OR b.batchNumber LIKE ${searchQ} OR b.lotNumber LIKE ${searchQ} OR p.nameEn LIKE ${searchQ})
+          AND (${input?.productId ?? null} IS NULL OR b.productId = ${input?.productId ?? null})
+          AND (${input?.expiringWithinDays ?? null} IS NULL OR (
+            b.expiryDate IS NOT NULL
+            AND b.expiryDate <= DATE_ADD(CURDATE(), INTERVAL ${input?.expiringWithinDays ?? 30} DAY)
+            AND b.expiryDate >= CURDATE()
+          ))
+        ORDER BY b.createdAt DESC
+        LIMIT 200
+      `);
+      return (Array.isArray((rows as any)[0]) ? (rows as any)[0] : rows) as any[];
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      productId: z.number(),
+      warehouseId: z.number(),
+      batchNumber: z.string(),
+      lotNumber: z.string().optional(),
+      expiryDate: z.string().optional(),
+      manufactureDate: z.string().optional(),
+      quantity: z.string(),
+      costPerUnit: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.execute(sql`
+        INSERT INTO inventory_batches (productId, warehouseId, batchNumber, lotNumber, expiryDate, manufactureDate, quantity, costPerUnit, notes, isActive)
+        VALUES (
+          ${input.productId}, ${input.warehouseId}, ${input.batchNumber},
+          ${input.lotNumber ?? null}, ${input.expiryDate ?? null}, ${input.manufactureDate ?? null},
+          ${input.quantity}, ${input.costPerUnit ?? null}, ${input.notes ?? null}, 1
+        )
+      `);
+      const [r] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      return { id: (r as any)[0].id as number };
+    }),
+
+  deactivate: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(inventoryBatches).set({ isActive: false }).where(eq(inventoryBatches.id, input.id));
+      return { success: true };
+    }),
+});
+
 export const inventoryRouter = router({
   warehouses: warehouseRouter,
   stockLevels: stockLevelsRouter,
@@ -496,4 +569,5 @@ export const inventoryRouter = router({
   adjustments: adjustmentsRouter,
   transfers: transfersRouter,
   alerts: alertsRouter,
+  batches: batchesRouter,
 });

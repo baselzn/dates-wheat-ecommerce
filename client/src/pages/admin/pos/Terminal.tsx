@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, CreditCard, Banknote,
   PauseCircle, PlayCircle, X, User, Percent, Receipt, RefreshCw,
-  ChevronDown, ChevronUp, Package, AlertCircle, CheckCircle2
+  ChevronDown, ChevronUp, Package, AlertCircle, CheckCircle2, Star
 } from "lucide-react";
 
 interface CartItem {
@@ -66,6 +66,7 @@ export default function POSTerminal() {
   const [lastAmountPaid, setLastAmountPaid] = useState("0");
   const [lastPaymentMethod, setLastPaymentMethod] = useState("cash");
   const [selectedItemIdx, setSelectedItemIdx] = useState<number | null>(null);
+  const [showFavorites, setShowFavorites] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Queries
@@ -73,6 +74,15 @@ export default function POSTerminal() {
   const { data: warehouses } = trpc.inventory.warehouses.list.useQuery();
   const { data: productsData } = trpc.products.list.useQuery({ limit: 200, page: 1 });
   const products = productsData?.products ?? [];
+  const { data: favoritesData, refetch: refetchFavorites } = trpc.pos.favorites.list.useQuery();
+  const favoriteIds = new Set((favoritesData ?? []).map((f: any) => f.productId as number));
+  const addFavorite = trpc.pos.favorites.add.useMutation({ onSuccess: () => void refetchFavorites() });
+  const removeFavorite = trpc.pos.favorites.remove.useMutation({ onSuccess: () => void refetchFavorites() });
+  const toggleFavorite = (e: React.MouseEvent, productId: number) => {
+    e.stopPropagation();
+    if (favoriteIds.has(productId)) removeFavorite.mutate({ productId });
+    else addFavorite.mutate({ productId });
+  };
   const { data: paymentMethods } = trpc.pos.paymentMethods.list.useQuery();
   const { data: heldOrders, refetch: refetchHeld } = trpc.pos.heldOrders.list.useQuery(
     { sessionId: sessionId! },
@@ -386,21 +396,42 @@ export default function POSTerminal() {
           </Button>
         </div>
 
+        {/* Favorites Tab Toggle */}
+        <div className="flex border-b border-gray-100">
+          <button
+            onClick={() => setShowFavorites(false)}
+            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+              !showFavorites ? "border-b-2 border-amber-600 text-amber-700" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            All Products
+          </button>
+          <button
+            onClick={() => setShowFavorites(true)}
+            className={`flex-1 py-1.5 text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
+              showFavorites ? "border-b-2 border-amber-600 text-amber-700" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Star className="w-3 h-3" />
+            Favorites {favoriteIds.size > 0 && `(${favoriteIds.size})`}
+          </button>
+        </div>
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto p-3">
-          {filteredProducts.length === 0 ? (
+          {(showFavorites ? (favoritesData ?? []) : filteredProducts).length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400">
               <Package className="w-10 h-10 mb-2 opacity-30" />
               <p className="text-sm">No products found</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-              {filteredProducts.map((product: any) => {
+              {(showFavorites ? (favoritesData ?? []) : filteredProducts).map((product: any) => {
                 let images: string[] = [];
                 try { images = product.images ? JSON.parse(product.images) : []; } catch {}
                 const inCartItem = cart.find(i => i.productId === product.id);
+                const isFav = favoriteIds.has(product.id ?? product.productId);
                 return (
-                  <button key={product.id} onClick={() => addToCart(product)}
+                  <button key={product.id ?? product.productId} onClick={() => addToCart(product)}
                     className={`relative flex flex-col items-center p-2 rounded-xl border-2 text-left transition-all hover:shadow-md active:scale-95 ${
                       inCartItem ? "border-amber-500 bg-amber-50" : "border-gray-200 bg-white hover:border-amber-300"
                     }`}
@@ -410,6 +441,15 @@ export default function POSTerminal() {
                         <span className="text-white text-xs font-bold">{inCartItem.qty}</span>
                       </div>
                     )}
+                    {/* Star toggle */}
+                    <button
+                      onClick={(e) => toggleFavorite(e, product.id ?? product.productId)}
+                      className={`absolute top-1 left-1 z-10 w-5 h-5 flex items-center justify-center rounded-full transition-colors ${
+                        isFav ? "text-amber-500" : "text-gray-300 hover:text-amber-400"
+                      }`}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${isFav ? "fill-amber-500" : ""}`} />
+                    </button>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2">
                       {images[0] ? (
                         <img src={images[0]} alt={product.nameEn} className="w-full h-full object-cover" />

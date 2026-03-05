@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart3, Bell, BookOpen, Box, Calculator, ChevronDown, ChevronRight,
-  ClipboardList, Factory, FlaskConical, Home, LayoutDashboard, LogOut,
-  MessageCircle, Package, Percent, Radio, Receipt, Settings, ShoppingCart, Tag, Terminal,
-  TrendingUp, Truck, Users, Warehouse, ToggleLeft
+  ClipboardList, Factory, FileText, FlaskConical, Home, LayoutDashboard, LogOut,
+  MessageCircle, Package, Percent, Radio, Receipt, Search, Settings, ShoppingCart, Tag, Terminal,
+  TrendingDown, TrendingUp, Truck, Users, Warehouse, ToggleLeft
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import CommandPalette from "./CommandPalette";
 
 type NavItem = { label: string; href: string; icon: React.ElementType };
 type NavGroup = { label: string; icon: React.ElementType; items: NavItem[] };
@@ -37,6 +38,8 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Adjustments", href: "/admin/inventory/adjustments", icon: ClipboardList },
       { label: "Transfers", href: "/admin/inventory/transfers", icon: Truck },
       { label: "Warehouses", href: "/admin/inventory/warehouses", icon: Warehouse },
+      { label: "Batch Tracking", href: "/admin/inventory/batches", icon: Package },
+      { label: "Forecasting", href: "/admin/inventory/forecasting", icon: TrendingDown },
     ],
   },
   {
@@ -48,6 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Sessions", href: "/admin/pos/sessions", icon: Receipt },
       { label: "POS Orders", href: "/admin/pos/orders", icon: ShoppingCart },
       { label: "Payment Methods", href: "/admin/pos/payment-methods", icon: Calculator },
+      { label: "Z-Report", href: "/admin/pos/z-report", icon: FileText },
       { label: "POS Settings", href: "/admin/pos/settings", icon: Settings },
     ],
   },
@@ -69,6 +73,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Chart of Accounts", href: "/admin/accounting/chart-of-accounts", icon: BookOpen },
       { label: "Journal Entries", href: "/admin/accounting/journal-entries", icon: ClipboardList },
       { label: "Financial Reports", href: "/admin/accounting/reports", icon: TrendingUp },
+      { label: "VAT Return", href: "/admin/accounting/vat-return", icon: FileText },
     ],
   },
   {
@@ -203,6 +208,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h1 className="font-semibold text-[#3E1F00]">{currentLabel}</h1>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground bg-muted rounded-lg border hover:bg-muted/80 transition-colors"
+            >
+              <Search className="w-3 h-3" />
+              <span>Search</span>
+              <kbd className="font-mono text-[10px] ml-1">⌘K</kbd>
+            </button>
             <Badge className="bg-[#F5ECD7] text-[#C9A84C] border-[#C9A84C]">Admin</Badge>
             <div className="w-8 h-8 rounded-full bg-[#C9A84C] flex items-center justify-center text-white text-sm font-bold">
               {user?.name?.[0]?.toUpperCase() || "A"}
@@ -212,6 +225,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Content */}
         <main className="flex-1 p-6 overflow-y-auto">
+          <CommandPalette />
           {children}
         </main>
       </div>

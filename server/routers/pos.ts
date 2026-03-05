@@ -8,12 +8,15 @@ import {
   posPaymentMethods,
   posSettings,
   posSessions,
+  posSplitPayments,
+  posFavorites,
   stockMovements,
   users,
   warehouses,
 } from "../../drizzle/schema";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { autoPostPOSJournal } from "../accounting";
 
 function generateOrderNumber(prefix: string): string {
   const ts = Date.now().toString(36).toUpperCase();
@@ -524,6 +527,103 @@ const dashboardRouter = router({
     }),
 });
 
+// ─── Product Favorites ───────────────────────────────────────────────────────
+const favoritesRouter = router({
+  list: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    const [rows] = await db.execute(sql`
+      SELECT f.id, f.productId, f.sortOrder,
+        p.nameEn, p.nameAr, p.basePrice, p.images, p.sku, p.stockQty
+      FROM pos_favorites f
+      JOIN products p ON p.id = f.productId AND p.isActive = 1
+      ORDER BY f.sortOrder ASC, f.createdAt ASC
+    `);
+    return (Array.isArray((rows as any)[0]) ? (rows as any)[0] : rows) as any[];
+  }),
+  add: protectedProcedure
+    .input(z.object({ productId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const existing = await db.select().from(posFavorites)
+        .where(eq(posFavorites.productId, input.productId)).limit(1);
+      if (existing.length > 0) return { id: existing[0].id };
+      await db.execute(sql`
+        INSERT INTO pos_favorites (productId, sortOrder) VALUES (${input.productId},
+          (SELECT COALESCE(MAX(sortOrder), 0) + 1 FROM pos_favorites pf2)
+        )
+      `);
+      const [r] = await db.execute(sql`SELECT LAST_INSERT_ID() as id`);
+      return { id: (r as any)[0].id as number };
+    }),
+  remove: protectedProcedure
+    .input(z.object({ productId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.delete(posFavorites).where(eq(posFavorites.productId, input.productId));
+      return { success: true };
+    }),
+});
+
+// ─── Z-Report (End of Day) ────────────────────────────────────────────────────
+const zReportRouter = router({
+  generate: protectedProcedure
+    .input(z.object({
+      sessionId: z.number().optional(),
+      date: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const dateStr = input.date ?? new Date().toISOString().slice(0, 10);
+      const sessionClause = input.sessionId ? sql`AND o.sessionId = ${input.sessionId}` : sql``;
+      const [summary] = await db.execute(sql`
+        SELECT
+          COUNT(*) as totalTransactions,
+          COALESCE(SUM(CASE WHEN o.status != 'voided' THEN o.total ELSE 0 END), 0) as totalRevenue,
+          COALESCE(SUM(CASE WHEN o.status != 'voided' THEN o.vatAmount ELSE 0 END), 0) as totalVat,
+          COALESCE(SUM(CASE WHEN o.status != 'voided' THEN o.discountAmount ELSE 0 END), 0) as totalDiscounts,
+          COALESCE(SUM(CASE WHEN o.status = 'refunded' THEN o.total ELSE 0 END), 0) as totalRefunds,
+          COALESCE(SUM(CASE WHEN o.status = 'voided' THEN 1 ELSE 0 END), 0) as totalVoids,
+          COALESCE(SUM(CASE WHEN o.status = 'completed' THEN o.total ELSE 0 END), 0) as netRevenue
+        FROM pos_orders o
+        WHERE DATE(o.createdAt) = ${dateStr} ${sessionClause}
+      `);
+      const [byMethod] = await db.execute(sql`
+        SELECT o.paymentMethod, COUNT(*) as count, COALESCE(SUM(o.total), 0) as total
+        FROM pos_orders o
+        WHERE DATE(o.createdAt) = ${dateStr} AND o.status = 'completed' ${sessionClause}
+        GROUP BY o.paymentMethod
+      `);
+      const [topProducts] = await db.execute(sql`
+        SELECT oi.productName, SUM(oi.qty) as totalQty, SUM(oi.lineTotal) as totalRevenue
+        FROM pos_order_items oi
+        JOIN pos_orders o ON o.id = oi.posOrderId
+        WHERE DATE(o.createdAt) = ${dateStr} AND o.status = 'completed' ${sessionClause}
+        GROUP BY oi.productName
+        ORDER BY totalRevenue DESC
+        LIMIT 10
+      `);
+      const [hourly] = await db.execute(sql`
+        SELECT HOUR(o.createdAt) as hour, COUNT(*) as count, COALESCE(SUM(o.total), 0) as total
+        FROM pos_orders o
+        WHERE DATE(o.createdAt) = ${dateStr} AND o.status = 'completed' ${sessionClause}
+        GROUP BY HOUR(o.createdAt)
+        ORDER BY hour ASC
+      `);
+      const toArr = (r: any) => Array.isArray((r as any)[0]) ? (r as any)[0] : r;
+      return {
+        date: dateStr,
+        summary: toArr(summary)[0] ?? {},
+        byPaymentMethod: toArr(byMethod) as any[],
+        topProducts: toArr(topProducts) as any[],
+        hourlySales: toArr(hourly) as any[],
+      };
+    }),
+});
+
 // ─── Customer Lookup ──────────────────────────────────────────────────────────
 const customersRouter = router({
   search: protectedProcedure
@@ -563,4 +663,6 @@ export const posRouter = router({
   settings: settingsRouter,
   dashboard: dashboardRouter,
   customers: customersRouter,
+  favorites: favoritesRouter,
+  zReport: zReportRouter,
 });
