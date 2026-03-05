@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { getProducts, getCategories } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -76,6 +77,61 @@ async function startServer() {
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Dynamic sitemap.xml
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const [products, categories] = await Promise.all([
+        getProducts({ limit: 500 }),
+        getCategories(),
+      ]);
+
+      const staticUrls = [
+        { loc: "/", priority: "1.0", changefreq: "daily" },
+        { loc: "/shop", priority: "0.9", changefreq: "daily" },
+        { loc: "/about", priority: "0.5", changefreq: "monthly" },
+        { loc: "/contact", priority: "0.5", changefreq: "monthly" },
+        { loc: "/flash-sales", priority: "0.8", changefreq: "hourly" },
+      ];
+
+      const categoryUrls = categories.map((c: { slug: string }) => ({
+        loc: `/shop/category/${c.slug}`,
+        priority: "0.7",
+        changefreq: "weekly",
+      }));
+
+      const productUrls = products.products.map((p: { slug: string; updatedAt?: Date }) => ({
+        loc: `/product/${p.slug}`,
+        priority: "0.8",
+        changefreq: "weekly",
+        lastmod: p.updatedAt ? new Date(p.updatedAt).toISOString().split("T")[0] : undefined,
+      }));
+
+      const allUrls: Array<{ loc: string; priority: string; changefreq: string; lastmod?: string }> = [...staticUrls, ...categoryUrls, ...productUrls];
+
+      const xml = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...allUrls.map(u => [
+          '  <url>',
+          `    <loc>${baseUrl}${u.loc}</loc>`,
+          u.lastmod ? `    <lastmod>${u.lastmod}</lastmod>` : '',
+          `    <changefreq>${u.changefreq}</changefreq>`,
+          `    <priority>${u.priority}</priority>`,
+          '  </url>',
+        ].filter(Boolean).join("\n")),
+        '</urlset>',
+      ].join("\n");
+
+      res.set("Content-Type", "application/xml");
+      res.set("Cache-Control", "public, max-age=3600");
+      res.send(xml);
+    } catch (err) {
+      console.error("[Sitemap] Error generating sitemap:", err);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
 
   // tRPC API
   app.use(

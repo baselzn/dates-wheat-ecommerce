@@ -30,6 +30,7 @@ import OrderTracking from "./pages/OrderTracking";
 // E-Commerce Enhancement admin pages (lazily loaded)
 const AdminFeatureFlags = lazy(() => import("./pages/admin/FeatureFlags"));
 const AdminQAManagement = lazy(() => import("./pages/admin/ecommerce/QAManagement"));
+const AdminLogin = lazy(() => import("./pages/admin/Login"));
 
 // Admin pages (lazily loaded — split into separate chunks)
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -106,6 +107,14 @@ function Router() {
       <Route path="/search" component={SearchPage} />
       <Route path="/order-tracking" component={OrderTracking} />
 
+      {/* Admin login — public, no auth required */}
+      <Route path="/admin/login">
+        {() => (
+          <Suspense fallback={<AdminLoading />}>
+            <AdminLogin />
+          </Suspense>
+        )}
+      </Route>
       {/* Admin routes — lazily loaded */}
       <Route path="/admin">
         {() => (

@@ -136,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && (!isAuthenticated || user?.role !== "admin")) {
-      navigate("/auth");
+      navigate("/admin/login");
     }
   }, [loading, isAuthenticated, user]);
 

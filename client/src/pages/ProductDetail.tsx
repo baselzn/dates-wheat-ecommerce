@@ -2,6 +2,7 @@ import Layout from "@/components/Layout";
 import ProductQA from "@/components/ProductQA";
 import RecentlyViewedSection from "@/components/RecentlyViewedSection";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,33 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [wishlist, setWishlist] = useState(false);
+
+  // Dynamic SEO meta tags + JSON-LD for product pages
+  const productImages = (product?.images as string[] | null) ?? [];
+  usePageMeta(product ? {
+    title: product.nameEn,
+    description: (product.descriptionEn ?? "").slice(0, 160) || `Buy ${product.nameEn} from Dates & Wheat — premium Arabic sweets from Fujairah, UAE.`,
+    image: productImages[0],
+    canonical: `/product/${product.slug}`,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.nameEn,
+      description: product.descriptionEn || "",
+      image: productImages,
+      sku: product.sku || product.slug,
+      brand: { "@type": "Brand", name: "Dates & Wheat" },
+      offers: {
+        "@type": "Offer",
+        priceCurrency: "AED",
+        price: product.comparePrice ? product.basePrice : product.basePrice,
+        availability: (product.stockQty ?? 0) > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+        seller: { "@type": "Organization", name: "Dates & Wheat" },
+      },
+    },
+  } : {});
 
   // Track this product as recently viewed
   useEffect(() => {

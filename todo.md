@@ -378,3 +378,46 @@
 - [x] CSV export on Products admin page — "Export CSV" button added to toolbar
 - [x] CSV export on Customers admin page — "Export CSV" button added to toolbar
 - [x] 0 TypeScript errors, 33 tests passing
+
+## Sprint 3 — Security, SEO & UX Polish
+
+### Admin Login 2FA
+- [ ] Remove Admin tab from public /auth page (keep Login + Sign Up only)
+- [ ] Dedicated /admin/login page with email/password step
+- [ ] Admin OTP 2FA: after password check, send 6-digit OTP to admin email via notifyOwner
+- [ ] Server: adminLogin procedure returns {requiresOtp: true} after password check
+- [ ] Server: adminVerifyOtp procedure verifies OTP and issues session cookie
+- [ ] OTP stored in DB with 10-minute expiry
+- [ ] /admin/* routes redirect to /admin/login if not authenticated as admin
+
+### Security
+- [ ] Install & configure helmet.js (HTTP security headers)
+- [ ] Install express-rate-limit (OTP + login endpoint rate limiting)
+- [ ] Admin route guard on frontend (redirect non-admins from /admin/*)
+- [ ] Input length validation on all tRPC inputs
+
+### SEO & Meta
+- [ ] robots.txt file in client/public
+- [ ] sitemap.xml generation endpoint (/sitemap.xml)
+- [ ] JSON-LD structured data for products (Product schema in ProductDetail)
+- [ ] Dynamic OG/Twitter meta tags per page (product, home, category)
+- [ ] Canonical URL meta tag in index.html
+
+### UX & Storefront
+- [ ] Breadcrumbs on product detail and category pages
+- [ ] Loading skeletons for product grid and product detail
+- [ ] Guest order tracking page (/track-order) with order number + phone lookup
+- [ ] Privacy Policy page (/privacy)
+- [ ] Terms & Conditions page (/terms)
+- [ ] Footer links to /privacy and /terms
+
+## Sprint 3 — Security, SEO & UX (COMPLETED)
+
+- [x] Admin Login 2FA — /admin/login page with email+password + 6-digit OTP via notifyOwner
+- [x] AdminLayout redirects to /admin/login instead of /auth
+- [x] Security: helmet.js, rate limiting (OTP: 10/10min, API: 300/min) — already in place, verified
+- [x] Dynamic sitemap.xml endpoint — lists all products, categories, and static pages with lastmod/priority
+- [x] usePageMeta hook — sets document.title, OG tags, canonical URL, JSON-LD per page
+- [x] Product detail pages — JSON-LD Product schema (name, price, availability, brand, sku)
+- [x] Shop page — breadcrumbs in header, dynamic meta title/description per category
+- [x] 0 TypeScript errors, 33 tests passing

@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +73,14 @@ export default function Shop() {
 
   const hasFilters = search || categorySlug || priceRange[0] > 0 || priceRange[1] < 500 || isGlutenFree || isSugarFree;
   const totalPages = data ? Math.ceil(data.total / 12) : 0;
-
+  const activeCategory = categorySlug ? categories?.find(c => c.slug === categorySlug) : null;
+  usePageMeta({
+    title: activeCategory ? `${activeCategory.nameEn} — Shop` : "Shop",
+    description: activeCategory
+      ? `Browse our ${activeCategory.nameEn} collection — premium Arabic sweets from Dates & Wheat, Fujairah UAE.`
+      : "Shop premium Maamoul, dates, Arabic sweets and luxury gift boxes from Dates & Wheat, Fujairah UAE.",
+    canonical: categorySlug ? `/shop/category/${categorySlug}` : "/shop",
+  });
   const FilterPanel = () => (
     <div className="space-y-6">
       {/* Categories */}
@@ -150,8 +158,22 @@ export default function Shop() {
       {/* Page Header */}
       <div className="bg-[#3E1F00] text-white py-10">
         <div className="container">
+          {/* Breadcrumbs */}
+          <nav className="flex items-center gap-1.5 text-sm text-[#E8D5A3]/60 mb-3">
+            <a href="/" className="hover:text-[#E8D5A3] transition-colors">Home</a>
+            <span>/</span>
+            {categorySlug ? (
+              <>
+                <a href="/shop" className="hover:text-[#E8D5A3] transition-colors">Shop</a>
+                <span>/</span>
+                <span className="text-[#E8D5A3]">{activeCategory?.nameEn || categorySlug}</span>
+              </>
+            ) : (
+              <span className="text-[#E8D5A3]">Shop</span>
+            )}
+          </nav>
           <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "Playfair Display, serif" }}>
-            {categorySlug ? categories?.find(c => c.slug === categorySlug)?.nameEn || "Shop" : "Our Products"}
+            {categorySlug ? activeCategory?.nameEn || "Shop" : "Our Products"}
           </h1>
           <p className="text-[#E8D5A3]/80">
             {data ? `${data.total} products available` : "Discover our premium Arabic sweets"}

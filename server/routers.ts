@@ -19,6 +19,7 @@ import { manufacturingRouter } from "./routers/manufacturing";
 import { accountingRouter } from "./routers/accounting";
 import { ecommerceRouter } from "./routers/ecommerce";
 import { ENV } from "./_core/env";
+import { notifyOwner } from "./_core/notification";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
@@ -249,6 +250,11 @@ export const appRouter = router({
         const code = String(Math.floor(100000 + Math.random() * 900000));
         const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
         await saveAdminOtp(user.id, code, expiresAt);
+        // Send OTP via owner notification
+        notifyOwner({
+          title: "Admin Login Verification Code",
+          content: `Your admin login verification code is: **${code}**\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
+        }).catch(() => {});
         console.log(`[Admin 2FA OTP] Email: ${user.email} — Code: ${code}`);
         return { requiresOtp: true as const, userId: user.id };
       }),
