@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import ProductQA from "@/components/ProductQA";
 import { usePixelTrack } from "@/components/PixelManager";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
@@ -301,6 +302,9 @@ export default function ProductDetail() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Product Q&A */}
+        <ProductQA productId={product.id} />
 
         {/* Related Products */}
         {related && related.products.length > 0 && (

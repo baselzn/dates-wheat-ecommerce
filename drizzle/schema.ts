@@ -753,3 +753,184 @@ export const posSettings = mysqlTable("pos_settings", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 export type PosSettingsRow = typeof posSettings.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// E-COMMERCE ENHANCEMENT TABLES (All Tiers)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Wishlist ─────────────────────────────────────────────────────────────────
+export const wishlists = mysqlTable("wishlists", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  variantId: int("variantId").references(() => productVariants.id, { onDelete: "set null" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Wishlist = typeof wishlists.$inferSelect;
+
+// ─── Flash Sales ─────────────────────────────────────────────────────────────
+export const flashSales = mysqlTable("flash_sales", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  nameAr: varchar("nameAr", { length: 128 }),
+  discountType: mysqlEnum("discountType", ["percentage", "fixed"]).notNull(),
+  discountValue: decimal("discountValue", { precision: 10, scale: 2 }).notNull(),
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  bannerText: varchar("bannerText", { length: 256 }),
+  bannerTextAr: varchar("bannerTextAr", { length: 256 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type FlashSale = typeof flashSales.$inferSelect;
+
+export const flashSaleProducts = mysqlTable("flash_sale_products", {
+  id: int("id").autoincrement().primaryKey(),
+  flashSaleId: int("flashSaleId").notNull().references(() => flashSales.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  overrideDiscount: decimal("overrideDiscount", { precision: 10, scale: 2 }),
+});
+export type FlashSaleProduct = typeof flashSaleProducts.$inferSelect;
+
+// ─── Product Bundles ──────────────────────────────────────────────────────────
+export const productBundles = mysqlTable("product_bundles", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  nameAr: varchar("nameAr", { length: 128 }),
+  description: text("description"),
+  descriptionAr: text("descriptionAr"),
+  slug: varchar("slug", { length: 160 }).notNull().unique(),
+  imageUrl: varchar("imageUrl", { length: 512 }),
+  originalPrice: decimal("originalPrice", { precision: 10, scale: 2 }).notNull(),
+  bundlePrice: decimal("bundlePrice", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  stockLimit: int("stockLimit"),
+  soldCount: int("soldCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProductBundle = typeof productBundles.$inferSelect;
+
+export const productBundleItems = mysqlTable("product_bundle_items", {
+  id: int("id").autoincrement().primaryKey(),
+  bundleId: int("bundleId").notNull().references(() => productBundles.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  variantId: int("variantId").references(() => productVariants.id, { onDelete: "set null" }),
+  quantity: int("quantity").default(1).notNull(),
+});
+export type ProductBundleItem = typeof productBundleItems.$inferSelect;
+
+// ─── Product Q&A ──────────────────────────────────────────────────────────────
+export const productQuestions = mysqlTable("product_questions", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  userId: int("userId").references(() => users.id, { onDelete: "set null" }),
+  guestName: varchar("guestName", { length: 128 }),
+  guestEmail: varchar("guestEmail", { length: 256 }),
+  question: text("question").notNull(),
+  answer: text("answer"),
+  answeredBy: int("answeredBy").references(() => users.id, { onDelete: "set null" }),
+  answeredAt: timestamp("answeredAt"),
+  isPublished: boolean("isPublished").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ProductQuestion = typeof productQuestions.$inferSelect;
+
+// ─── Loyalty Points ───────────────────────────────────────────────────────────
+export const loyaltyPoints = mysqlTable("loyalty_points", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  points: int("points").notNull(),
+  type: mysqlEnum("type", ["earned_order", "earned_review", "earned_referral", "redeemed", "expired", "manual_adjust"]).notNull(),
+  refType: varchar("refType", { length: 64 }),
+  refId: int("refId"),
+  description: varchar("description", { length: 256 }),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type LoyaltyPoint = typeof loyaltyPoints.$inferSelect;
+
+export const loyaltySettings = mysqlTable("loyalty_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// ─── Abandoned Cart Tracking ──────────────────────────────────────────────────
+export const abandonedCarts = mysqlTable("abandoned_carts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").references(() => users.id, { onDelete: "cascade" }),
+  guestEmail: varchar("guestEmail", { length: 256 }),
+  cartSnapshot: text("cartSnapshot").notNull(),
+  totalValue: decimal("totalValue", { precision: 10, scale: 2 }).notNull(),
+  reminderSentAt: timestamp("reminderSentAt"),
+  recoveredAt: timestamp("recoveredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+export type AbandonedCart = typeof abandonedCarts.$inferSelect;
+
+// ─── Order Tracking Events ────────────────────────────────────────────────────
+export const orderTrackingEvents = mysqlTable("order_tracking_events", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 64 }).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  titleAr: varchar("titleAr", { length: 256 }),
+  description: text("description"),
+  location: varchar("location", { length: 256 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdBy: int("createdBy").references(() => users.id, { onDelete: "set null" }),
+});
+export type OrderTrackingEvent = typeof orderTrackingEvents.$inferSelect;
+
+// ─── Recently Viewed Products ─────────────────────────────────────────────────
+export const recentlyViewed = mysqlTable("recently_viewed", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  productId: int("productId").notNull().references(() => products.id, { onDelete: "cascade" }),
+  viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+});
+export type RecentlyViewed = typeof recentlyViewed.$inferSelect;
+
+// ─── Product Review Votes ─────────────────────────────────────────────────────
+export const reviewVotes = mysqlTable("review_votes", {
+  id: int("id").autoincrement().primaryKey(),
+  reviewId: int("reviewId").notNull().references(() => reviews.id, { onDelete: "cascade" }),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  vote: mysqlEnum("vote", ["helpful", "not_helpful"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReviewVote = typeof reviewVotes.$inferSelect;
+
+// ─── Feature Flags (Store Feature Settings) ───────────────────────────────────
+export const featureFlags = mysqlTable("feature_flags", {
+  id: int("id").autoincrement().primaryKey(),
+  feature: varchar("feature", { length: 64 }).notNull().unique(),
+  isEnabled: boolean("isEnabled").default(true).notNull(),
+  config: text("config"),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedBy: int("updatedBy").references(() => users.id, { onDelete: "set null" }),
+});
+export type FeatureFlag = typeof featureFlags.$inferSelect;
+
+// ─── Referral Codes ───────────────────────────────────────────────────────────
+export const referralCodes = mysqlTable("referral_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  usedCount: int("usedCount").default(0).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReferralCode = typeof referralCodes.$inferSelect;
+
+export const referralUses = mysqlTable("referral_uses", {
+  id: int("id").autoincrement().primaryKey(),
+  referralCodeId: int("referralCodeId").notNull().references(() => referralCodes.id),
+  referredUserId: int("referredUserId").notNull().references(() => users.id),
+  orderId: int("orderId").references(() => orders.id),
+  pointsAwarded: int("pointsAwarded").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReferralUse = typeof referralUses.$inferSelect;

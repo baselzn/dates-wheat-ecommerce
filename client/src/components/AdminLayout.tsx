@@ -5,7 +5,7 @@ import {
   BarChart3, Bell, BookOpen, Box, Calculator, ChevronDown, ChevronRight,
   ClipboardList, Factory, FlaskConical, Home, LayoutDashboard, LogOut,
   Package, Percent, Radio, Receipt, Settings, ShoppingCart, Tag, Terminal,
-  TrendingUp, Truck, Users, Warehouse
+  TrendingUp, Truck, Users, Warehouse, ToggleLeft
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -78,6 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Push Notifications", href: "/admin/push-notifications", icon: Bell },
       { label: "Tracking Pixels", href: "/admin/tracking", icon: Radio },
       { label: "WooCommerce Import", href: "/admin/woo-importer", icon: Package },
+      { label: "Feature Flags", href: "/admin/feature-flags", icon: ToggleLeft },
       { label: "Settings", href: "/admin/settings", icon: Settings },
     ],
   },

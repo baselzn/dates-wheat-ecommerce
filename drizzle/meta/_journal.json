@@ -78,6 +78,13 @@
       "when": 1772466781097,
       "tag": "0010_tough_mach_iv",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1772715362111,
+      "tag": "0011_perpetual_omega_sentinel",
+      "breakpoints": true
     }
   ]
 }

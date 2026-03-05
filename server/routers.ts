@@ -17,6 +17,7 @@ import { inventoryRouter } from "./routers/inventory";
 import { posRouter } from "./routers/pos";
 import { manufacturingRouter } from "./routers/manufacturing";
 import { accountingRouter } from "./routers/accounting";
+import { ecommerceRouter } from "./routers/ecommerce";
 import { ENV } from "./_core/env";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -1231,6 +1232,7 @@ export const appRouter = router({
   pos: posRouter,
   manufacturing: manufacturingRouter,
   accounting: accountingRouter,
+  ecommerce: ecommerceRouter,
   // ─── Page Views ─────────────────────────────────────────────
   pageViews: router({
     log: publicProcedure

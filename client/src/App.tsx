@@ -21,6 +21,14 @@ import Account from "./pages/Account";
 import TrackOrder from "./pages/TrackOrder";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import FlashSales from "./pages/FlashSales";
+import Wishlist from "./pages/Wishlist";
+import LoyaltyPoints from "./pages/LoyaltyPoints";
+import SearchPage from "./pages/Search";
+import OrderTracking from "./pages/OrderTracking";
+
+// E-Commerce Enhancement admin pages (lazily loaded)
+const AdminFeatureFlags = lazy(() => import("./pages/admin/FeatureFlags"));
 
 // Admin pages (lazily loaded — split into separate chunks)
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -91,6 +99,11 @@ function Router() {
       <Route path="/track-order" component={TrackOrder} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/flash-sales" component={FlashSales} />
+      <Route path="/wishlist" component={Wishlist} />
+      <Route path="/loyalty" component={LoyaltyPoints} />
+      <Route path="/search" component={SearchPage} />
+      <Route path="/order-tracking" component={OrderTracking} />
 
       {/* Admin routes — lazily loaded */}
       <Route path="/admin">
@@ -181,6 +194,13 @@ function Router() {
         {() => (
           <Suspense fallback={<AdminLoading />}>
             <AdminPushNotifications />
+          </Suspense>
+        )}
+      </Route>
+      <Route path="/admin/feature-flags">
+        {() => (
+          <Suspense fallback={<AdminLoading />}>
+            <AdminFeatureFlags />
           </Suspense>
         )}
       </Route>

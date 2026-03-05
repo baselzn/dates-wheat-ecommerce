@@ -304,3 +304,42 @@
 - [x] Migration applied (0009)
 - [x] Production build passing (0 errors)
 - [x] All 33 tests passing
+
+## E-Commerce Enhancement (Tier 1-3)
+
+### Database & Backend
+- [x] DB: 15 new tables (wishlists, product_reviews, flash_sales, flash_sale_products, product_bundles, product_bundle_items, product_questions, loyalty_points, loyalty_settings, abandoned_carts, order_tracking_events, recently_viewed, review_votes, feature_flags, referral_codes, referral_uses)
+- [x] Migration 0011 applied successfully
+- [x] Backend ecommerce tRPC router created (wishlist, flashSales, bundles, qa, loyalty, featureFlags, referral, tracking, abandonedCart, recentlyViewed, reviews)
+- [x] Ecommerce router wired into main router
+
+### API Fixes
+- [x] Fix flashSales.active procedure to join product data (returns product name, image, slug, computed salePrice)
+- [x] Fix LoyaltyPoints.tsx to use balance.balance instead of balance.points
+
+### New Pages
+- [x] Search page (/search?q=) with full-text product search and filters
+- [x] Wishlist page (/wishlist) with add-to-cart functionality
+- [x] Order Tracking page (/order-tracking) with status timeline
+- [x] Flash Sales page (/flash-sales) with countdown timer and product cards
+- [x] Loyalty Points page (/loyalty) with balance, tier, history, and earn/redeem info
+
+### New Components
+- [x] ProductQA component (product detail page Q&A section with ask form and collapsible answers)
+
+### Admin Pages
+- [x] Feature Flags admin page (/admin/feature-flags) with toggles for 14 e-commerce features
+
+### Navigation & Routing
+- [x] All new customer pages added to App.tsx routes
+- [x] Feature Flags route added to App.tsx
+- [x] Header search updated to navigate to /search page
+- [x] Header wishlist link updated to /wishlist
+- [x] Header user dropdown: Wishlist + Loyalty Points links added
+- [x] Mobile menu: Wishlist + Loyalty Points links added
+- [x] AdminLayout sidebar: Feature Flags added to Tools section
+- [x] ProductQA component integrated into ProductDetail page
+
+### Quality
+- [x] 0 TypeScript errors
+- [x] 33 tests passing

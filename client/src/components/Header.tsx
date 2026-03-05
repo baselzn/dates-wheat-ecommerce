@@ -3,7 +3,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { trpc } from "@/lib/trpc";
 import {
   ChevronDown, LogOut, Menu, Package, Search,
-  ShoppingBag, User, X, Phone, MapPin, Heart, Settings
+  ShoppingBag, User, X, Phone, MapPin, Heart, Settings, Star, Zap
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
@@ -73,7 +73,7 @@ export default function Header({ onCartOpen }: HeaderProps) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
       setSearchQuery("");
     }
@@ -198,7 +198,7 @@ export default function Header({ onCartOpen }: HeaderProps) {
                 <Search className="h-[18px] w-[18px]" />
               </button>
 
-              <Link href="/account?tab=wishlist"
+              <Link href="/wishlist"
                 className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl text-[#3E1F00] hover:text-[#C9A84C] hover:bg-[#FFF8F0] transition-all">
                 <Heart className="h-[18px] w-[18px]" />
               </Link>
@@ -229,6 +229,14 @@ export default function Header({ onCartOpen }: HeaderProps) {
                         <Link href="/account" onClick={() => setUserOpen(false)}
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0] hover:text-[#C9A84C] transition-colors">
                           <Package className="h-4 w-4" /> My Orders
+                        </Link>
+                        <Link href="/wishlist" onClick={() => setUserOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0] hover:text-[#C9A84C] transition-colors">
+                          <Heart className="h-4 w-4" /> Wishlist
+                        </Link>
+                        <Link href="/loyalty" onClick={() => setUserOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0] hover:text-[#C9A84C] transition-colors">
+                          <Star className="h-4 w-4" /> Loyalty Points
                         </Link>
                         {user?.role === "admin" && (
                           <Link href="/admin" onClick={() => setUserOpen(false)}
@@ -309,6 +317,14 @@ export default function Header({ onCartOpen }: HeaderProps) {
                     <Link href="/account" onClick={() => setMobileOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0]">
                       <Package className="h-4 w-4 text-[#C9A84C]" /> My Orders
+                    </Link>
+                    <Link href="/wishlist" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0]">
+                      <Heart className="h-4 w-4 text-[#C9A84C]" /> Wishlist
+                    </Link>
+                    <Link href="/loyalty" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[#3E1F00] hover:bg-[#FFF8F0]">
+                      <Star className="h-4 w-4 text-[#C9A84C]" /> Loyalty Points
                     </Link>
                     {user?.role === "admin" && (
                       <Link href="/admin" onClick={() => setMobileOpen(false)}
