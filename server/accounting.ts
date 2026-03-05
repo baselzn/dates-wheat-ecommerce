@@ -2,12 +2,13 @@
  * Auto-posting helpers for e-commerce and POS orders.
  * Called after an order is confirmed/paid to create a journal entry automatically.
  *
- * Chart of Accounts assumed (system accounts, code-based lookup):
- *   1100 — Accounts Receivable (or Cash for COD/POS)
- *   1000 — Cash / Bank
- *   4000 — Sales Revenue
- *   2200 — VAT Payable
- *   5000 — Cost of Goods Sold (optional, if COGS tracking is enabled)
+ * Chart of Accounts used (leaf accounts, code-based lookup):
+ *   1001 — Cash on Hand          (COD payments & POS sales)
+ *   1100 — Accounts Receivable   (online/card payments)
+ *   4001 — Sales Revenue         (product subtotal net of discounts)
+ *   4101 — Shipping Income       (delivery fees)
+ *   4200 — Sales Discounts       (coupon / contra-revenue)
+ *   2200 — VAT Payable (Output)  (5% UAE VAT)
  */
 
 import { eq, sql } from "drizzle-orm";
@@ -99,19 +100,19 @@ export async function autoPostOrderJournal(order: {
   const discount = parseFloat(order.discountAmount);
   const total = parseFloat(order.total);
 
-  // Look up required accounts
+  // Look up required accounts (leaf accounts, not parent headers)
   const isCod = order.paymentMethod === "cod";
   const debitAccount = isCod
-    ? await findAccount(db, "1000") // Cash
-    : await findAccount(db, "1100"); // Accounts Receivable
-  const salesAccount = await findAccount(db, "4000");
-  const vatAccount = await findAccount(db, "2200");
-  const shippingAccount = await findAccount(db, "4100");
-  const discountAccount = await findAccount(db, "5100");
+    ? await findAccount(db, "1001") // Cash on Hand (COD)
+    : await findAccount(db, "1100"); // Accounts Receivable (online/card)
+  const salesAccount = await findAccount(db, "4001");  // Sales Revenue
+  const vatAccount = await findAccount(db, "2200");    // VAT Payable (Output)
+  const shippingAccount = await findAccount(db, "4101"); // Shipping Income
+  const discountAccount = await findAccount(db, "4200"); // Sales Discounts (contra-revenue)
 
   // If core accounts are missing, skip silently (accounts not set up yet)
   if (!debitAccount || !salesAccount || !vatAccount) {
-    console.warn(`[Accounting] Skipping auto-post for order ${order.orderNumber}: required accounts (1100/1000, 4000, 2200) not found.`);
+    console.warn(`[Accounting] Skipping auto-post for order ${order.orderNumber}: required accounts (1001/1100, 4001, 2200) not found.`);
     return;
   }
 
@@ -125,14 +126,26 @@ export async function autoPostOrderJournal(order: {
     description: `Order ${order.orderNumber}`,
   });
 
-  // CR: Sales Revenue (subtotal minus discount)
-  const netSales = (subtotal - discount).toFixed(2);
+  // CR: Sales Revenue (full subtotal)
   lines.push({
     accountId: salesAccount.id,
     debit: "0.00",
-    credit: netSales,
+    credit: subtotal.toFixed(2),
     description: `Sales — Order ${order.orderNumber}`,
   });
+
+  // DR: Sales Discounts (contra-revenue) if a coupon was applied
+  if (discount > 0 && discountAccount) {
+    lines.push({
+      accountId: discountAccount.id,
+      debit: discount.toFixed(2),
+      credit: "0.00",
+      description: `Discount — Order ${order.orderNumber}`,
+    });
+  } else if (discount > 0) {
+    // Fallback: reduce the AR/Cash debit by the discount amount (already reflected in total)
+    // No separate line needed — total already nets the discount
+  }
 
   // CR: VAT Payable
   if (vat > 0) {
@@ -200,18 +213,18 @@ export async function autoPostPOSJournal(posOrder: {
   const tax = parseFloat(posOrder.taxAmount);
   const total = parseFloat(posOrder.total);
 
-  const cashAccount = await findAccount(db, "1000");
-  const salesAccount = await findAccount(db, "4000");
-  const vatAccount = await findAccount(db, "2200");
+  const cashAccount = await findAccount(db, "1001");  // Cash on Hand
+  const salesAccount = await findAccount(db, "4003");  // POS Sales Revenue
+  const vatAccount = await findAccount(db, "2200");    // VAT Payable (Output)
 
   if (!cashAccount || !salesAccount || !vatAccount) {
-    console.warn(`[Accounting] Skipping auto-post for POS order ${posOrder.orderNumber}: required accounts not found.`);
+    console.warn(`[Accounting] Skipping auto-post for POS order ${posOrder.orderNumber}: required accounts (1001, 4003, 2200) not found.`);
     return;
   }
 
   const lines: { accountId: number; debit: string; credit: string; description?: string }[] = [
     { accountId: cashAccount.id, debit: total.toFixed(2), credit: "0.00", description: `POS ${posOrder.orderNumber}` },
-    { accountId: salesAccount.id, debit: "0.00", credit: subtotal.toFixed(2), description: `Sales — POS ${posOrder.orderNumber}` },
+    { accountId: salesAccount.id, debit: "0.00", credit: subtotal.toFixed(2), description: `POS Sales — ${posOrder.orderNumber}` },
   ];
   if (tax > 0) {
     lines.push({ accountId: vatAccount.id, debit: "0.00", credit: tax.toFixed(2), description: `VAT — POS ${posOrder.orderNumber}` });

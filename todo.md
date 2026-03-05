@@ -421,3 +421,12 @@
 - [x] Product detail pages — JSON-LD Product schema (name, price, availability, brand, sku)
 - [x] Shop page — breadcrumbs in header, dynamic meta title/description per category
 - [x] 0 TypeScript errors, 33 tests passing
+
+## Chart of Accounts & Auto-Posting (COMPLETED)
+
+- [x] Verified Chart of Accounts fully seeded (65 accounts across asset/liability/equity/revenue/expense/cogs)
+- [x] Added account 4200 — Sales Discounts & Returns (contra-revenue) for coupon tracking
+- [x] Fixed auto-posting codes to use leaf accounts: 1001 (Cash on Hand), 1100 (AR), 4001 (Sales Revenue), 4003 (POS Sales Revenue), 4101 (Shipping Income), 4200 (Sales Discounts), 2200 (VAT Payable)
+- [x] Verified journal entry balance math: DR Cash/AR + DR Discounts = CR Sales + CR VAT + CR Shipping (always balanced)
+- [x] Marked all 7 auto-posting accounts as isSystem=true (cannot be deleted from admin UI)
+- [x] 0 TypeScript errors, 33 tests passing

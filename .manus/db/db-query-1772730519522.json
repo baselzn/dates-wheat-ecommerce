@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE accounts SET isSystem = 1 WHERE code IN ('1001','1100','2200','4001','4003','4101','4200');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XDmtcLiNQCFHbR.root --database im5rDxWZ47ziDUxareQHeH --execute UPDATE accounts SET isSystem = 1 WHERE code IN ('1001','1100','2200','4001','4003','4101','4200');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1642
+}

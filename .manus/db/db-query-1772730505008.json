@@ -1,0 +1,52 @@
+{
+  "query": "SELECT code, name, type, isActive FROM accounts WHERE code IN ('1001','1100','2200','4001','4003','4101','4200') ORDER BY code;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XDmtcLiNQCFHbR.root --database im5rDxWZ47ziDUxareQHeH --execute SELECT code, name, type, isActive FROM accounts WHERE code IN ('1001','1100','2200','4001','4003','4101','4200') ORDER BY code;",
+  "rows": [
+    {
+      "code": "1001",
+      "name": "Cash on Hand",
+      "type": "asset",
+      "isActive": "1"
+    },
+    {
+      "code": "1100",
+      "name": "Accounts Receivable",
+      "type": "asset",
+      "isActive": "1"
+    },
+    {
+      "code": "2200",
+      "name": "VAT Payable (Output)",
+      "type": "liability",
+      "isActive": "1"
+    },
+    {
+      "code": "4001",
+      "name": "Sales Revenue",
+      "type": "revenue",
+      "isActive": "1"
+    },
+    {
+      "code": "4003",
+      "name": "POS Sales Revenue",
+      "type": "revenue",
+      "isActive": "1"
+    },
+    {
+      "code": "4101",
+      "name": "Shipping Income",
+      "type": "revenue",
+      "isActive": "1"
+    },
+    {
+      "code": "4200",
+      "name": "Sales Discounts & Returns",
+      "type": "revenue",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "code\tname\ttype\tisActive\n1001\tCash on Hand\tasset\t1\n1100\tAccounts Receivable\tasset\t1\n2200\tVAT Payable (Output)\tliability\t1\n4001\tSales Revenue\trevenue\t1\n4003\tPOS Sales Revenue\trevenue\t1\n4101\tShipping Income\trevenue\t1\n4200\tSales Discounts & Returns\trevenue\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1569
+}
