@@ -430,3 +430,74 @@
 - [x] Verified journal entry balance math: DR Cash/AR + DR Discounts = CR Sales + CR VAT + CR Shipping (always balanced)
 - [x] Marked all 7 auto-posting accounts as isSystem=true (cannot be deleted from admin UI)
 - [x] 0 TypeScript errors, 33 tests passing
+
+## Module 2: POS Enhancements
+
+### Tier 1 — Operational Essentials
+- [ ] Split Payment — pay one order with multiple methods (cash + card)
+- [ ] End-of-Day Z-Report — daily summary: total sales, cash in drawer, card totals, voids, refunds; export PDF
+- [ ] Customer Creation at POS — add new customer directly from terminal without leaving the sale
+- [ ] Product Favorites / Quick Access — pin frequently sold products to a quick-access grid
+
+### Tier 2 — Customer Experience
+- [ ] Loyalty Points at POS — earn and redeem loyalty points during POS checkout
+- [ ] Offline Mode — queue sales locally when internet is down; sync when connection restores
+
+### Tier 3 — Analytics & Reporting
+- [ ] Hourly Sales Heatmap — which hours of day generate most revenue
+- [ ] Cashier Performance Report — sales per cashier, average transaction value, items per transaction
+- [ ] Product Mix Report — which products sell most at POS vs online
+- [ ] POS vs Online Revenue Comparison — unified dashboard showing both channels
+
+## Module 3: Inventory Enhancements
+
+### Tier 1 — Core Inventory Operations
+- [ ] Batch / Lot Tracking — track products by batch number and expiry date
+- [ ] Expiry Date Management — alert when products approach expiry; auto-suggest FIFO picking
+- [ ] Bin / Location Management — assign shelf/bin locations within a warehouse
+- [ ] Inventory Forecasting — predict when stock will run out based on sales velocity
+- [ ] Dead Stock Report — products with zero movement in 60+ days
+
+### Tier 2 — Advanced Operations
+- [ ] Stock Reservation — reserve stock when an online order is placed; prevent overselling
+- [ ] Negative Stock Prevention — block POS and online sales when stock reaches zero
+
+### Tier 3 — Reporting
+- [ ] Stock Aging Report — how long has each batch been in stock
+- [ ] ABC Analysis — classify products by revenue contribution (A/B/C)
+- [ ] Inventory Turnover Ratio — COGS ÷ Average Inventory per period
+
+## Module 5: Accounting Enhancements
+
+### Tier 1 — Core Accounting Automation
+- [ ] Auto-posting from Purchase Orders — receiving a PO posts: Dr Inventory, Cr Accounts Payable
+- [ ] Bank Reconciliation — import bank statement CSV, match to journal entries
+- [ ] VAT Return Preparation — auto-calculate UAE VAT 5% output/input tax; generate VAT 201 summary
+- [ ] Accounts Payable (AP) Module — supplier invoices, payment scheduling, aging report
+- [ ] Fixed Assets Register — track assets, calculate depreciation, post entries automatically
+
+### Tier 2 — Reporting & Compliance
+- [ ] Cash Flow Statement — operating, investing, financing activities (indirect method)
+- [ ] Budget vs Actual Report — set annual budgets per account; compare monthly actuals
+- [ ] Financial Ratios Dashboard — Current Ratio, Gross Margin %, Net Margin %
+- [ ] Period Closing Workflow — lock accounting periods after month-end close
+
+### Tier 3 — UAE Compliance
+- [ ] UAE VAT 201 Report — formatted output matching FTA requirements
+- [ ] Arabic Financial Statements — bilingual P&L and Balance Sheet (EN + AR)
+
+## Module 6: Frontend & Admin UI Enhancements
+
+### Tier 1 — Visual Design
+- [ ] Product Card hover zoom + quick-add overlay + wishlist heart icon
+- [ ] Micro-animations — cart bounce, page transitions, button loading spinners
+- [ ] Command Palette (Cmd+K) — global search across products, orders, customers
+
+### Tier 2 — Responsive & Mobile
+- [ ] Mobile Product Page — sticky bottom bar with price + Add to Cart; swipeable gallery
+- [ ] Bottom Sheet Dialogs — replace modals on mobile with bottom sheets
+
+### Tier 3 — Admin UI
+- [ ] Data Tables upgrade — column sorting, bulk actions, row-level actions menu
+- [ ] Inline Editing — edit product price/stock directly in table row
+- [ ] Admin dark mode — full dark theme for admin panel
